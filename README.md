@@ -1,5 +1,5 @@
 # Weird Science
-A lightweight .NET library that helps to perform experiments in sensitive environments when Unit Tests just won't do.
+Weird Science is a lightweight .NET library that helps to perform experiments in sensitive environments when Unit Tests just won't do. This was directly inspired by Github's Ruby [Scientist](https://github.com/github/scientist) library. As they say, this is meant to aid in "carefully refactoring critical paths."
 
 ## Examples using Fluent Syntax
 
