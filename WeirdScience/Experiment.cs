@@ -9,7 +9,7 @@ namespace WeirdScience
 
     // TODO: Should there be an experiment with no Generic e.g. returns Void? What would that even do?
 
-    internal class SimpleExperiment<T> : Experiment<T, T>
+    public class SimpleExperiment<T> : Experiment<T, T>
     {
         #region Public Constructors
 

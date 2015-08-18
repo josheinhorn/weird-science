@@ -26,11 +26,11 @@ namespace WeirdScience
             return new CandidateBuilder<T, T>(experiment);
         }
         public static ICandidateBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
-            Func<T, TPublish> PrepareResults, bool throwOnInternalExceptions = false)
+            Func<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
         {
             //TOOD: publisher, error handler, etc
             var experiment = new Experiment<T, TPublish>(name, _publisher, throwOnInternalExceptions);
-            experiment.Steps.Prepare = PrepareResults;
+            experiment.Steps.Prepare = prepareResults;
             experiment.Steps.Control = control;
             return new CandidateBuilder<T, TPublish>(experiment);
         }

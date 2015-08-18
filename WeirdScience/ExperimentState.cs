@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WeirdScience
 {
-    public class ExperimentState<T> : IExperimentState<T>
+    internal class ExperimentState<T> : IExperimentState<T>
     {
         //public T CurrentValue
         //{

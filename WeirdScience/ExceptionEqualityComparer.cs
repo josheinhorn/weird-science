@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WeirdScience
 {
-    public class ExceptionEqualityComparer : IEqualityComparer<Exception>
+    internal class ExceptionEqualityComparer : IEqualityComparer<Exception>
     {
         public bool Equals(Exception x, Exception y)
         {
