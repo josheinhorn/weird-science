@@ -282,16 +282,15 @@ namespace WeirdScience
                         {
                             var context = Context();
                             Publish(Setup(), CurrentState.GetSnapshot());
-                            timer.Reset();
+                            timer.Restart();
                             timer.Start();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
-                            if (!Ignore(controlResult, candResult)
-                                && controlException == null
-                                && !AreEqual(controlResult, candResult))
+                            if (controlException != null || 
+                                !Ignore(controlResult, candResult) && !AreEqual(controlResult, candResult))
                             {
                                 mismatched = true;
-                                var misMessage = OnMismatch(controlResult, candResult, null, null);
+                                var misMessage = OnMismatch(controlResult, candResult, controlException, null);
                                 Publish(misMessage, CurrentState.GetSnapshot());
                             }
                             candValue = Prepare(candResult);
