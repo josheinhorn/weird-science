@@ -14,32 +14,36 @@ namespace WeirdScience
         OnMismatch,
         OnError,
         AreEqual,
-        Context,
+        SetContext,
         Publish,
         RunInParallel,
-        Timeout,
+        SetTimeout,
         Prepare,
         Teardown,
         Complete,
         Internal = 0 //Exception happened in WeirdScience code, this is default
     }
 
-    public interface ICandidateBuilder<T, TPublish> : IExperimentOptionsBuilder<T, TPublish>
+    public interface ICandidateBuilder<T, TPublish> : IFluentSyntax
     {
         #region Public Methods
 
-        ICandidateBuilder<T, TPublish> Candidate(string name, Func<T> candidate);
+        /// <summary>
+        /// Adds a Candidate to the Experiment.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="candidate"></param>
+        /// <returns></returns>
+        IExperimentBuilder<T, TPublish> Candidate(string name, Func<T> candidate);
 
         #endregion Public Methods
     }
 
-    public interface IControlBuilder<T, TPublish> : IFluentSyntax
+    public interface IControlBuilder<T, TPublish> : ICandidateBuilder<T, TPublish>
     {
         #region Public Methods
 
-        ICandidateBuilder<T, TPublish> Candidate(string name, Func<T> candidate);
-
-        ICandidateBuilder<T, TPublish> Control(Func<T> control);
+        IExperimentBuilder<T, TPublish> Control(Func<T> control);
 
         #endregion Public Methods
     }
@@ -51,6 +55,11 @@ namespace WeirdScience
         void HandleError(IExperimentError error);
 
         #endregion Public Methods
+    }
+
+    public interface IExperimentBuilder<T, TPublish> : IExperimentOptionsBuilder<T, TPublish>,
+                    ICandidateBuilder<T, TPublish>
+    {
     }
 
     public interface IExperimentError
@@ -68,8 +77,9 @@ namespace WeirdScience
     public interface IExperimentOptionsBuilder<T, TPublish> : IFluentSyntax
     {
         #region Public Methods
+
         /// <summary>
-        /// Sets a method to determine if two resulsts are equivalent.
+        /// Sets a method to determine if two results are equivalent.
         /// </summary>
         /// <param name="compare"></param>
         /// <returns></returns>
@@ -82,24 +92,28 @@ namespace WeirdScience
         /// <param name="ignoreIf"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Ignore(Func<T, T, bool> ignoreIf);
+
         /// <summary>
         /// Sets an action to perform if an error occurs.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnError(Action<IExperimentError> handler);
+
         /// <summary>
         /// Sets an action to perform if an error occurs and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnError(Func<IExperimentError, string> handler);
+
         /// <summary>
         /// Sets an action to perform when a mismatch occurs.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnMismatch(Action<T, T, Exception, Exception> handler);
+
         /// <summary>
         /// Sets an action to perform when a mismatch occurs and return a message.
         /// </summary>
@@ -107,61 +121,75 @@ namespace WeirdScience
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler);
 
+        /// <summary>
+        /// Sets a method to determine whether or not to run the Candidates. Use this to reduce the
+        /// number of times the experiment is done under high load.
+        /// </summary>
+        /// <param name="runIf"></param>
+        /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> PreCondition(Func<bool> runIf);
 
         /// <summary>
-        /// Sets a method to prepare the experiment resulsts for Publish so that unneccessary data is not held longer
-        /// than necessary.
+        /// Sets a method to prepare the experiment resulsts for Publish so that unneccessary data
+        /// is not held longer than necessary.
         /// </summary>
         /// <remarks>
-        /// Common uses would be to extract only the data you care to publish from a result, especially in the case of 
-        /// lists of large objects.
+        /// Common uses would be to extract only the data you care to publish from a result,
+        /// especially in the case of lists of large objects.
         /// </remarks>
         /// <param name="prepare"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Prepare(Func<T, TPublish> prepare);
 
         /// <summary>
-        /// Runs the Experimnt and returns the result from the Control or throws the Exception that the Control throws.
+        /// Runs the Experimnt and returns the result from the Control or throws the Exception that
+        /// the Control throws.
         /// </summary>
         /// <returns></returns>
         T Run();
 
         IExperimentOptionsBuilder<T, TPublish> RunInParallel(Func<bool> conditional); //future!
+
         /// <summary>
-        /// Sets a method to return a Context object that will be available in each Observation of the Experiment
-        /// Results.
+        /// Sets a method to return a Context object that will be available in each Observation of
+        /// the Experiment Results.
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> SetContext(Func<object> context);
+
         /// <summary>
-        /// Sets a method to determine the timeout in milliseconds. The Experiment will run this amount of time for
-        /// each Candidate before moving on. Setting this method will force the Experiment to run each Candidate in 
-        /// a separate Thread. The Experiment will NOT terminate/abort the Thread after the set period and the Thread
-        /// will be left to run on in Parallel with the remainder of the Program, so use this option carefully.
+        /// Sets a method to determine the timeout in milliseconds. The Experiment will run this
+        /// amount of time for each Candidate before moving on. Setting this method will force the
+        /// Experiment to run each Candidate in a separate Thread. The Experiment will NOT
+        /// terminate/abort the Thread after the set period and the Thread will be left to run on in
+        /// Parallel with the remainder of the Program, so use this option carefully.
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> SetTimeout(Func<long> timeout);
+
         /// <summary>
         /// Sets an action to perform before each Candidate is run.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Setup(Action handler);
+
         /// <summary>
         /// Sets an action to perform before each Candidate is run and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler);
+
         /// <summary>
         /// Sets an action to perform after each Candidate is run.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Teardown(Action handler);
+
         /// <summary>
         /// Sets an action to perform after each Candidate is run and return a message.
         /// </summary>
@@ -170,7 +198,6 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler);
 
         #endregion Public Methods
-
     }
 
     public interface IExperimentResult<T>

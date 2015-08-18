@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace WeirdScience
+﻿namespace WeirdScience
 {
     internal class Observation<T> : IObservation<T>
     {
+        #region Public Properties
+
         public object Context
         {
             get;
@@ -55,5 +51,7 @@ namespace WeirdScience
             get;
             internal set;
         }
+
+        #endregion Public Properties
     }
 }

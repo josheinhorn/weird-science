@@ -1,18 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     public class ConsolePublisher : ISciencePublisher
     {
+        #region Private Fields
+
         private StringBuilder messages = new StringBuilder();
+
+        #endregion Private Fields
+
+        #region Public Methods
+
         public virtual void Publish<T>(string message, IExperimentState<T> state)
         {
             if (!string.IsNullOrEmpty(message))
-                messages.AppendFormat("  {3} - Message from Experiment '{0}' in Step '{1}': {2}\n", 
+                messages.AppendFormat("  {3} - Message from Experiment '{0}' in Step '{1}': {2}\n",
                     state.Name, state.Step, message, state.Timestamp.ToLongTimeString());
         }
 
@@ -34,6 +38,10 @@ namespace WeirdScience
             messages.Clear();
         }
 
+        #endregion Public Methods
+
+        #region Private Methods
+
         private void PublishObservation<T>(IObservation<T> observation)
         {
             Console.WriteLine("  " + observation.Name);
@@ -42,5 +50,7 @@ namespace WeirdScience
                 string.Format("(Exception: {0})", observation.Error.LastException) : string.Empty,
                 observation.Value);
         }
+
+        #endregion Private Methods
     }
 }

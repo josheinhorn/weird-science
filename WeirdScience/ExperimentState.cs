@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
@@ -13,6 +9,8 @@ namespace WeirdScience
         //    get;
         //    set;
         //}
+
+        #region Public Properties
 
         public string Name
         {
@@ -26,12 +24,17 @@ namespace WeirdScience
             set;
         }
 
+        public DateTime Timestamp { get; set; }
+
+        #endregion Public Properties
+
+        #region Public Methods
+
         public IExperimentState<T> GetSnapshot()
         {
             return MemberwiseClone() as IExperimentState<T>;
         }
 
-        public DateTime Timestamp { get; set; }
-
+        #endregion Public Methods
     }
 }

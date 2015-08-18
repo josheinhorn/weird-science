@@ -9,31 +9,17 @@ namespace WeirdScience
 
     // TODO: Should there be an experiment with no Generic e.g. returns Void? What would that even do?
 
-    public class SimpleExperiment<T> : Experiment<T, T>
-    {
-        #region Public Constructors
-
-        public SimpleExperiment(string name, ISciencePublisher publisher, bool raiseInternalExceptions)
-            : base(name, publisher, raiseInternalExceptions)
-        { }
-
-        public SimpleExperiment(string name, ISciencePublisher publisher)
-            : base(name, publisher, false)
-        { }
-
-        #endregion Public Constructors
-    }
-
     public class Experiment<T, TPublish> : IScienceExperiment<T, TPublish>
     {
         #region Private Fields
 
         private const string ControlName = "WeirdScience.Control";
 
-        private bool throwOnInternalExceptions;
-
         //possibly allow this to be injected?
         private ExceptionEqualityComparer exceptionComparer = new ExceptionEqualityComparer();
+
+        private bool throwOnInternalExceptions;
+
         #endregion Private Fields
 
         #region Public Constructors
@@ -43,8 +29,8 @@ namespace WeirdScience
             Name = name;
             Publisher = publisher; //if this is null, nothing gets published! should we throw?
             this.throwOnInternalExceptions = throwOnInternalExceptions;
-            CurrentState = new ExperimentState<TPublish>();
-            Steps = new ExperimentSteps<T, TPublish>();
+            CurrentState = new ExperimentState<TPublish>(); //consider ctor injection
+            Steps = new ExperimentSteps<T, TPublish>(); //consider ctor injection
         }
 
         public Experiment(string name, ISciencePublisher publisher)
@@ -55,7 +41,7 @@ namespace WeirdScience
 
         #region Public Properties
 
-        public virtual string Name { get; private set; }
+        public virtual string Name { get; protected set; }
 
         public virtual IExperimentSteps<T, TPublish> Steps { get; protected set; }
 
@@ -63,7 +49,7 @@ namespace WeirdScience
 
         #region Protected Properties
 
-        protected virtual IExperimentState<TPublish> CurrentState { get; private set; }
+        protected virtual IExperimentState<TPublish> CurrentState { get; set; }
         protected ISciencePublisher Publisher { get; set; }
 
         #endregion Protected Properties
@@ -84,7 +70,7 @@ namespace WeirdScience
 
         public virtual object Context()
         {
-            CurrentState.Step = Operations.Context;
+            CurrentState.Step = Operations.SetContext;
             CurrentState.Timestamp = DateTime.UtcNow;
             return TryStep(() =>
             {
@@ -92,7 +78,7 @@ namespace WeirdScience
             });
         }
 
-        public virtual ICandidateBuilder<T, TPublish> Control(Func<T> control)
+        public virtual IExperimentBuilder<T, TPublish> Control(Func<T> control)
         {
             this.Steps.Control = control;
             return new CandidateBuilder<T, TPublish>(this);
@@ -190,7 +176,7 @@ namespace WeirdScience
             });
         }
 
-        public virtual T Run()
+        public T Run() //Should this be virtual? overriding this breaks the class' logic, so no
         {
             if (CurrentState == null)
             {
@@ -198,11 +184,6 @@ namespace WeirdScience
                     "The Experiment State is null! This Experiment has likely already been complete. " +
                     "Can't run Experiment.");
             }
-            //if (Steps == null)
-            //{
-            //    throw new InvalidOperationException(
-            //       "The Experiment Steps for this Experiment were never set. Can't run Experiment.");
-            //}
             IExperimentResult<TPublish> results = new ExperimentResult<TPublish>
             {
                 CurrentState = CurrentState,
@@ -271,7 +252,7 @@ namespace WeirdScience
 
         public virtual long Timeout()
         {
-            CurrentState.Step = Operations.Timeout;
+            CurrentState.Step = Operations.SetTimeout;
             CurrentState.Timestamp = DateTime.UtcNow;
             return TryStep(() =>
             {
@@ -283,12 +264,6 @@ namespace WeirdScience
 
         #region Private Methods
 
-        private T TryCandidate(Func<T> candidate)
-        {
-            CurrentState.Step = Operations.Candidate;
-            CurrentState.Timestamp = DateTime.UtcNow;
-            return TryStep(candidate);
-        }
         private void RunCandidates(IExperimentResult<TPublish> results, T controlResult, Exception controlException)
         {
             if (Steps.Candidates != null)
@@ -345,7 +320,6 @@ namespace WeirdScience
                         timer.Stop();
                         //it's possible for this to throw, which would result in an internal exception
                         Publish(OnError(sfe.ExperimentError), CurrentState.GetSnapshot());
-
                         if (!exceptionComparer.Equals(sfe.ExperimentError.LastException, controlException))
                         {
                             //It's a mismatch if the exceptions don't match
@@ -392,7 +366,7 @@ namespace WeirdScience
             }
             catch (StepFailedException sfe)
             {
-                OnError(sfe.ExperimentError);
+                Publish(OnError(sfe.ExperimentError), CurrentState.GetSnapshot());
                 //We'll still run the Control even without a context
             }
             var timer = new Stopwatch();
@@ -449,6 +423,13 @@ namespace WeirdScience
             return result;
         }
 
+        private T TryCandidate(Func<T> candidate)
+        {
+            CurrentState.Step = Operations.Candidate;
+            CurrentState.Timestamp = DateTime.UtcNow;
+            return TryStep(candidate);
+        }
+
         private TOut TryStep<TOut>(Func<TOut> tryOp)
         {
             TOut result = default(TOut);
@@ -473,5 +454,20 @@ namespace WeirdScience
         }
 
         #endregion Private Methods
+    }
+
+    public class SimpleExperiment<T> : Experiment<T, T>
+    {
+        #region Public Constructors
+
+        public SimpleExperiment(string name, ISciencePublisher publisher, bool raiseInternalExceptions)
+            : base(name, publisher, raiseInternalExceptions)
+        { }
+
+        public SimpleExperiment(string name, ISciencePublisher publisher)
+            : base(name, publisher, false)
+        { }
+
+        #endregion Public Constructors
     }
 }

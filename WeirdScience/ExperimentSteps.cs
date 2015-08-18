@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     internal class ExperimentSteps<T, TPublish> : IExperimentSteps<T, TPublish>
     {
+        #region Public Constructors
+
         public ExperimentSteps()
         {
             Candidates = new Dictionary<string, Func<T>>();
         }
+
+        #endregion Public Constructors
+
+        #region Public Properties
 
         public Func<T, T, bool> AreEqual
         {
@@ -23,17 +26,17 @@ namespace WeirdScience
             get; private set;
         }
 
-        public Func<object> SetContext
-        {
-            get; set;
-        }
-
         public Func<T> Control
         {
             get; set;
         }
 
         public Func<T, T, bool> Ignore
+        {
+            get; set;
+        }
+
+        public Func<IExperimentError, string> OnError
         {
             get; set;
         }
@@ -48,6 +51,11 @@ namespace WeirdScience
             get; set;
         }
 
+        public Func<T, TPublish> Prepare
+        {
+            get; set;
+        }
+
         public Action<IExperimentResult<TPublish>> Publish
         {
             get; set;
@@ -58,7 +66,12 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<T, TPublish> Prepare
+        public Func<object> SetContext
+        {
+            get; set;
+        }
+
+        public Func<long> SetTimeout
         {
             get; set;
         }
@@ -73,14 +86,6 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<long> SetTimeout
-        {
-            get; set;
-        }
-
-        public Func<IExperimentError, string> OnError
-        {
-            get; set;
-        }
+        #endregion Public Properties
     }
 }

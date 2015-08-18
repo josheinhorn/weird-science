@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     internal class ExceptionEqualityComparer : IEqualityComparer<Exception>
     {
+        #region Public Methods
+
         public bool Equals(Exception x, Exception y)
         {
             if (x == null)
@@ -25,5 +24,7 @@ namespace WeirdScience
         {
             return obj.GetHashCode();
         }
+
+        #endregion Public Methods
     }
 }

@@ -1,31 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     public static class Laboratory
     {
+        #region Private Fields
+
         private static ISciencePublisher _publisher = new ConsolePublisher();
-        public static void SetPublisher(ISciencePublisher publisher)
-        {
-            _publisher = publisher;
-        }
+
+        #endregion Private Fields
+
+        #region Public Methods
+
         public static IControlBuilder<T, T> DoScience<T>(string name, bool throwOnInternalExceptions = false)
         {
             var experiment = new SimpleExperiment<T>(name, _publisher, throwOnInternalExceptions);
             return new Laboratory<T, T>(experiment);
         }
-        public static ICandidateBuilder<T, T> DoScience<T>(string name, Func<T> control,
+
+        public static IExperimentBuilder<T, T> DoScience<T>(string name, Func<T> control,
             bool throwOnInternalExceptions = false)
         {
             var experiment = new SimpleExperiment<T>(name, _publisher, throwOnInternalExceptions);
             experiment.Steps.Control = control;
             return new CandidateBuilder<T, T>(experiment);
         }
-        public static ICandidateBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
+
+        public static IExperimentBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
             Func<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
         {
             //TOOD: publisher, error handler, etc
@@ -35,14 +36,29 @@ namespace WeirdScience
             return new CandidateBuilder<T, TPublish>(experiment);
         }
 
+        public static void SetPublisher(ISciencePublisher publisher)
+        {
+            _publisher = publisher;
+        }
+
+        #endregion Public Methods
     }
+
     public class Laboratory<T, TPublish> : IControlBuilder<T, TPublish>
     {
+        #region Private Fields
+
         private IScienceExperiment<T, TPublish> experiment;
+
+        #endregion Private Fields
+
+        #region Public Constructors
+
         public Laboratory(IScienceExperiment<T, TPublish> experiment)
         {
             this.experiment = experiment;
         }
+
         public Laboratory(string name) : this(name, new ConsolePublisher())
         { }
 
@@ -54,7 +70,11 @@ namespace WeirdScience
             : this(new Experiment<T, TPublish>(name, publisher, throwOnInternalExceptions))
         { }
 
-        public ICandidateBuilder<T, TPublish> Candidate(string name, Func<T> candidate)
+        #endregion Public Constructors
+
+        #region Public Methods
+
+        public IExperimentBuilder<T, TPublish> Candidate(string name, Func<T> candidate)
         {
             if (experiment.Steps.Candidates.ContainsKey(name))
             {
@@ -64,10 +84,12 @@ namespace WeirdScience
             return new CandidateBuilder<T, TPublish>(experiment);
         }
 
-        public ICandidateBuilder<T, TPublish> Control(Func<T> control)
+        public IExperimentBuilder<T, TPublish> Control(Func<T> control)
         {
             experiment.Steps.Control = control;
             return new CandidateBuilder<T, TPublish>(experiment);
         }
+
+        #endregion Public Methods
     }
 }
