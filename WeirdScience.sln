@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience", "WeirdScience\WeirdScience.csproj", "{D459087F-5FC8-4495-B022-F852F02EB19A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "Tester\Tester.csproj", "{A3F65501-A0E4-490C-B665-CEE11E534B38}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D459087F-5FC8-4495-B022-F852F02EB19A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D459087F-5FC8-4495-B022-F852F02EB19A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D459087F-5FC8-4495-B022-F852F02EB19A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D459087F-5FC8-4495-B022-F852F02EB19A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
