@@ -8,7 +8,7 @@ The below example creates an experiment using `Laboratory`'s static helper metho
 ```C#
 Laboratory.SetPublisher(new MyCustomPublisher());
 var foo = new List<string>();
-var result = Laboratory.DoScience("Science!", () => DoSomething(foo), true)
+var result = Laboratory.DoScience("Science!", () => DoSomething(foo))
    .Candidate("candidate", () => { foo.Add("bar"); return DoSomethingElse(foo); })
    .AreEqual((ctrl, cand) => ctrl.Length == cand.Length)
    .OnMismatch((ctrl, cand, ctrlExcp, candExcp) => "Oops! Mismatch!!")
