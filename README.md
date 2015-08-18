@@ -5,7 +5,7 @@ A lightweight .NET library that helps to perform experiments in sensitive enviro
 
 The below example creates an experiment using `Laboratory`'s static helper method. Note that the methods `DoSomething` and `DoSomethingElse` return `string` results:
 
-```
+```C#
 Laboratory.SetPublisher(new MyCustomPublisher());
 var foo = new List<string>();
 var result = Laboratory.DoScience("Science!", () => DoSomething(foo), true)
