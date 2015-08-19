@@ -16,7 +16,7 @@
             internal set;
         }
 
-        public IExperimentError Error
+        public IExperimentError ExperimentError
         {
             get;
             internal set;

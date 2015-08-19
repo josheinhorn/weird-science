@@ -15,42 +15,61 @@ namespace WeirdScience
 
         private const string ControlName = "WeirdScience.Control";
 
+        private IExperimentState<TPublish> _currentState;
+
+        private string _name;
+
+        private ISciencePublisher _publisher;
+
+        private IExperimentSteps<T, TPublish> _steps;
+
+        private bool _throwOnInternalExceptions;
+
         //possibly allow this to be injected?
         private ExceptionEqualityComparer exceptionComparer = new ExceptionEqualityComparer();
-
-        private bool throwOnInternalExceptions;
 
         #endregion Private Fields
 
         #region Public Constructors
 
-        public Experiment(string name, ISciencePublisher publisher, bool throwOnInternalExceptions)
+        public Experiment(string name, ISciencePublisher publisher, IExperimentState<TPublish> state,
+            IExperimentSteps<T, TPublish> steps, bool throwOnInternalExceptions)
         {
-            Name = name;
-            Publisher = publisher; //if this is null, nothing gets published! should we throw?
-            this.throwOnInternalExceptions = throwOnInternalExceptions;
-            CurrentState = new ExperimentState<TPublish>(); //consider ctor injection
-            Steps = new ExperimentSteps<T, TPublish>(); //consider ctor injection
+            _name = name;
+            _publisher = publisher; //if this is null, nothing gets published! should we throw?
+            _throwOnInternalExceptions = throwOnInternalExceptions;
+            _currentState = state;
+            _steps = steps; //should be overwriten by public Set
         }
 
+        public Experiment(string name, ISciencePublisher publisher, IExperimentState<TPublish> state,
+            bool throwOnInternalExceptions)
+            : this(name, publisher, state, new ExperimentSteps<T, TPublish>(), throwOnInternalExceptions)
+        { }
+
+        public Experiment(string name, ISciencePublisher publisher, bool throwOnInternalExceptions)
+            : this(name, publisher, new ExperimentState<TPublish>(), throwOnInternalExceptions)
+        { }
+
         public Experiment(string name, ISciencePublisher publisher)
-            : this(name, publisher, false)
+            : this(name, publisher, new ExperimentState<TPublish>(), false)
         { }
 
         #endregion Public Constructors
 
         #region Public Properties
 
-        public virtual string Name { get; protected set; }
+        public virtual string Name { get { return _name; } }
 
-        public virtual IExperimentSteps<T, TPublish> Steps { get; protected set; }
+        public virtual IExperimentSteps<T, TPublish> Steps { get { return _steps; } set { _steps = value; } }
 
         #endregion Public Properties
 
         #region Protected Properties
 
-        protected virtual IExperimentState<TPublish> CurrentState { get; set; }
-        protected ISciencePublisher Publisher { get; set; }
+        protected virtual IExperimentState<TPublish> CurrentState { get { return _currentState; } }
+        protected virtual ISciencePublisher Publisher { get { return _publisher; } }
+        protected virtual bool ThrowOnInternalExceptions { get { return _throwOnInternalExceptions; } }
 
         #endregion Protected Properties
 
@@ -58,8 +77,7 @@ namespace WeirdScience
 
         public virtual bool AreEqual(T control, T candidate)
         {
-            CurrentState.Step = Operations.AreEqual;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.AreEqual;
             return TryStep(() =>
             {
                 return Steps.AreEqual == null ?
@@ -70,24 +88,16 @@ namespace WeirdScience
 
         public virtual object Context()
         {
-            CurrentState.Step = Operations.SetContext;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.SetContext;
             return TryStep(() =>
             {
                 return Steps.SetContext != null ? Steps.SetContext() : null;
             });
         }
 
-        public virtual IExperimentBuilder<T, TPublish> Control(Func<T> control)
-        {
-            this.Steps.Control = control;
-            return new CandidateBuilder<T, TPublish>(this);
-        }
-
         public virtual bool Ignore(T control, T candidate)
         {
-            CurrentState.Step = Operations.Ignore;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Ignore;
             return TryStep(() =>
             {
                 return Steps.Ignore == null ? false : Steps.Ignore(control, candidate);
@@ -96,8 +106,7 @@ namespace WeirdScience
 
         public virtual string OnError(IExperimentError error)
         {
-            CurrentState.Step = Operations.OnError;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.OnError;
             if (error == null) throw new ArgumentNullException("error");
             return TryStep(() =>
             {
@@ -109,8 +118,7 @@ namespace WeirdScience
         public virtual string OnMismatch(T control, T candidate,
             Exception controlException, Exception candidateException)
         {
-            CurrentState.Step = Operations.OnMismatch;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.OnMismatch;
             return TryStep(() =>
             {
                 if (Steps.OnMismatch != null)
@@ -121,8 +129,7 @@ namespace WeirdScience
 
         public virtual bool PreCondition()
         {
-            CurrentState.Step = Operations.PreCondition;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.PreCondition;
             return TryStep(() =>
             {
                 return Steps.PreCondition == null ? true : Steps.PreCondition();
@@ -131,8 +138,7 @@ namespace WeirdScience
 
         public virtual TPublish Prepare(T result)
         {
-            CurrentState.Step = Operations.Prepare;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Prepare;
             return TryStep(() =>
             {
                 if (Steps.Prepare == null)
@@ -154,8 +160,7 @@ namespace WeirdScience
 
         public virtual void Publish(IExperimentResult<TPublish> results)
         {
-            CurrentState.Step = Operations.Publish;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Publish;
             TryStep(() =>
             {
                 if (Publisher != null)
@@ -166,8 +171,7 @@ namespace WeirdScience
 
         public virtual void Publish(string message, IExperimentState<TPublish> state)
         {
-            CurrentState.Step = Operations.Publish;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Publish;
             TryStep(() =>
             {
                 if (Publisher != null)
@@ -186,7 +190,7 @@ namespace WeirdScience
             }
             IExperimentResult<TPublish> results = new ExperimentResult<TPublish>
             {
-                CurrentState = CurrentState,
+                LastState = CurrentState,
                 Name = Name
             };
             T controlValue = default(T);
@@ -198,7 +202,7 @@ namespace WeirdScience
             catch (Exception)
             {
                 //Fatal error occurred!
-                if (throwOnInternalExceptions) throw;
+                if (ThrowOnInternalExceptions) throw;
                 //continue on with the candidates
             }
             try
@@ -209,9 +213,9 @@ namespace WeirdScience
             catch (Exception)
             {
                 //A fatal error occured in one of the candidates or Publisher, throw for debug purposes if flag is set
-                if (throwOnInternalExceptions) throw;
+                if (ThrowOnInternalExceptions) throw;
             }
-            CurrentState = null;
+            _currentState = null;
             if (controlException != null)
                 throw controlException;
             else
@@ -220,8 +224,7 @@ namespace WeirdScience
 
         public virtual bool RunInParallel()
         {
-            CurrentState.Step = Operations.RunInParallel;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.RunInParallel;
             return TryStep(() =>
             {
                 return Steps.RunInParallel == null ? false : Steps.RunInParallel();
@@ -230,8 +233,7 @@ namespace WeirdScience
 
         public virtual string Setup()
         {
-            CurrentState.Step = Operations.Setup;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Setup;
             return TryStep(() =>
             {
                 if (Steps.Setup != null) return Steps.Setup();
@@ -241,8 +243,7 @@ namespace WeirdScience
 
         public virtual string Teardown()
         {
-            CurrentState.Step = Operations.Teardown;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Teardown;
             return TryStep(() =>
             {
                 if (Steps.Teardown != null) return Steps.Teardown();
@@ -252,8 +253,7 @@ namespace WeirdScience
 
         public virtual long Timeout()
         {
-            CurrentState.Step = Operations.SetTimeout;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.SetTimeout;
             return TryStep(() =>
             {
                 return Steps.SetTimeout == null ? 0 : Steps.SetTimeout();
@@ -266,10 +266,11 @@ namespace WeirdScience
 
         private void RunCandidates(IExperimentResult<TPublish> results, T controlResult, Exception controlException)
         {
-            if (Steps.Candidates != null)
+            var candidates = Steps.GetCandidates();
+            if (candidates != null)
             {
                 var timer = new Stopwatch();
-                foreach (var candidate in Steps.Candidates)
+                foreach (var candidate in candidates)
                 {
                     T candResult = default(T);
                     TPublish candValue = default(TPublish);
@@ -281,20 +282,20 @@ namespace WeirdScience
                         if (PreCondition() && candidate.Value != null)
                         {
                             var context = Context();
-                            Publish(Setup(), CurrentState.GetSnapshot());
+                            Publish(Setup(), CurrentState.Snapshot());
                             timer.Restart();
                             timer.Start();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
-                            if (controlException != null || 
-                                !Ignore(controlResult, candResult) && !AreEqual(controlResult, candResult))
+                            if (!Ignore(controlResult, candResult) &&
+                                (controlException != null || !AreEqual(controlResult, candResult)))
                             {
                                 mismatched = true;
                                 var misMessage = OnMismatch(controlResult, candResult, controlException, null);
-                                Publish(misMessage, CurrentState.GetSnapshot());
+                                Publish(misMessage, CurrentState.Snapshot());
                             }
                             candValue = Prepare(candResult);
-                            Publish(Teardown(), CurrentState.GetSnapshot());
+                            Publish(Teardown(), CurrentState.Snapshot());
                             if (!results.Candidates.ContainsKey(candidate.Key))
                             {
                                 results.Candidates.Add(candidate.Key,
@@ -318,28 +319,28 @@ namespace WeirdScience
                     {
                         timer.Stop();
                         //it's possible for this to throw, which would result in an internal exception
-                        Publish(OnError(sfe.ExperimentError), CurrentState.GetSnapshot());
+                        Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
                         if (!exceptionComparer.Equals(sfe.ExperimentError.LastException, controlException))
                         {
                             //It's a mismatch if the exceptions don't match
                             mismatched = true;
                             var misMessage = OnMismatch(controlResult, candResult,
                                 controlException, sfe.ExperimentError.LastException); //potential throw
-                            Publish(misMessage, CurrentState.GetSnapshot());
+                            Publish(misMessage, CurrentState.Snapshot());
                         }
                         var errResult = new Observation<TPublish>
                         {
-                            Error = sfe.ExperimentError,
+                            ExperimentError = sfe.ExperimentError,
                             Value = candValue,
                             ElapsedMilliseconds = timer.ElapsedMilliseconds,
                             ExceptionThrown = true,
                             Name = candidate.Key,
                             IsMismatched = mismatched
                         };
-                        if (results.Candidates.ContainsKey(results.CurrentState.Name))
-                            results.Candidates[results.CurrentState.Name] = errResult;
+                        if (results.Candidates.ContainsKey(results.LastState.Name))
+                            results.Candidates[results.LastState.Name] = errResult;
                         else
-                            results.Candidates.Add(results.CurrentState.Name, errResult);
+                            results.Candidates.Add(results.LastState.Name, errResult);
                     }
                 }
             }
@@ -349,8 +350,7 @@ namespace WeirdScience
         {
             controlException = null;
             CurrentState.Name = ControlName;
-            CurrentState.Step = Operations.Control;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Control;
             if (Steps.Control == null)
             {
                 throw new InvalidOperationException(
@@ -365,11 +365,11 @@ namespace WeirdScience
             }
             catch (StepFailedException sfe)
             {
-                Publish(OnError(sfe.ExperimentError), CurrentState.GetSnapshot());
+                Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
                 //We'll still run the Control even without a context
             }
             var timer = new Stopwatch();
-            try
+            CurrentState.CurrentStep = Operations.Control; try
             {
                 timer.Start();
                 result = Steps.Control();
@@ -382,15 +382,15 @@ namespace WeirdScience
                 var error = new ExperimentError
                 {
                     LastException = e,
-                    Step = Operations.Control,
+                    LastStep = Operations.Control,
                     ErrorMessage = "An Exception was thrown running the Control! Exception message: "
                         + e.Message,
                     ExperimentName = ControlName
                 };
-                Publish(OnError(error), CurrentState.GetSnapshot());//TODO: Should we run OnError on Control??
+                Publish(OnError(error), CurrentState.Snapshot());//TODO: Should we run OnError on Control??
                 results.Control = new Observation<TPublish>
                 {
-                    Error = error,
+                    ExperimentError = error,
                     ElapsedMilliseconds = timer.ElapsedMilliseconds,
                     Context = context,
                     Name = ControlName,
@@ -407,7 +407,7 @@ namespace WeirdScience
             catch (StepFailedException sfe)
             {
                 excpThrown = true;
-                Publish(OnError(sfe.ExperimentError), CurrentState.GetSnapshot());
+                Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
                 //We must continue on because we've already gotten a result
             }
             results.Control = new Observation<TPublish>
@@ -424,8 +424,7 @@ namespace WeirdScience
 
         private T TryCandidate(Func<T> candidate)
         {
-            CurrentState.Step = Operations.Candidate;
-            CurrentState.Timestamp = DateTime.UtcNow;
+            CurrentState.CurrentStep = Operations.Candidate;
             return TryStep(candidate);
         }
 
@@ -441,10 +440,10 @@ namespace WeirdScience
                 var error = new ExperimentError
                 {
                     LastException = e,
-                    Step = CurrentState.Step,
+                    LastStep = CurrentState.CurrentStep,
                     ErrorMessage = string.Format(
                         "An Exception was thrown running Step '{0}'. Exception message: {1}",
-                        CurrentState.Step, e.Message),
+                        CurrentState.CurrentStep, e.Message),
                     ExperimentName = CurrentState.Name
                 };
                 throw new StepFailedException(error);

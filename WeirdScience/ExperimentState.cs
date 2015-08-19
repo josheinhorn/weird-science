@@ -4,33 +4,34 @@ namespace WeirdScience
 {
     internal class ExperimentState<T> : IExperimentState<T>
     {
-        //public T CurrentValue
-        //{
-        //    get;
-        //    set;
-        //}
+        #region Private Fields
+
+        private string _name;
+        private Operations _step;
+
+        #endregion Private Fields
 
         #region Public Properties
 
         public string Name
         {
-            get;
-            set;
+            get { return _name; }
+            set { _name = value; Timestamp = DateTime.UtcNow; }
         }
 
-        public Operations Step
+        public Operations CurrentStep
         {
-            get;
-            set;
+            get { return _step; }
+            set { _step = value; Timestamp = DateTime.UtcNow; }
         }
 
-        public DateTime Timestamp { get; set; }
+        public DateTime Timestamp { get; private set; }
 
         #endregion Public Properties
 
         #region Public Methods
 
-        public IExperimentState<T> GetSnapshot()
+        public IExperimentState<T> Snapshot()
         {
             return MemberwiseClone() as IExperimentState<T>;
         }

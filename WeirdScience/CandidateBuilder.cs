@@ -7,16 +7,23 @@ namespace WeirdScience
         #region Private Fields
 
         private IScienceExperiment<T, TPublish> experiment;
-
+        private IExperimentSteps<T, TPublish> steps;
         #endregion Private Fields
 
         #region Public Constructors
 
-        public CandidateBuilder(IScienceExperiment<T, TPublish> experiment)
+        internal CandidateBuilder(IScienceExperiment<T, TPublish> experiment) 
+            : this(experiment, new ExperimentSteps<T, TPublish>())
+        { 
+        }
+        internal CandidateBuilder(IScienceExperiment<T, TPublish> experiment, IExperimentSteps<T, TPublish> steps)
         {
             if (experiment == null) throw new ArgumentNullException("experiment");
+            if (steps == null) throw new ArgumentNullException("steps");
             this.experiment = experiment;
+            this.steps = steps;
         }
+
 
         #endregion Public Constructors
 
@@ -25,7 +32,7 @@ namespace WeirdScience
         public IExperimentOptionsBuilder<T, TPublish> AreEqual(Func<T, T, bool> compare)
         {
             if (compare == null) throw new ArgumentNullException("compare");
-            experiment.Steps.AreEqual = compare;
+            steps.AreEqual = compare;
             return this;
         }
 
@@ -33,18 +40,14 @@ namespace WeirdScience
         {
             if (candidate == null) throw new ArgumentNullException("candidate");
             if (name == null) throw new ArgumentNullException("name");
-            if (experiment.Steps.Candidates.ContainsKey(name))
-            {
-                throw new ArgumentException("An Experiment with Name " + name + " has already been added!");
-            }
-            experiment.Steps.Candidates.Add(name, candidate);
+            steps.AddCandidate(name, candidate);
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> Ignore(Func<T, T, bool> ignoreIf)
         {
             if (ignoreIf == null) throw new ArgumentNullException("ignoreIf");
-            experiment.Steps.Ignore = ignoreIf;
+            steps.Ignore = ignoreIf;
             return this;
         }
 
@@ -58,7 +61,7 @@ namespace WeirdScience
         public IExperimentOptionsBuilder<T, TPublish> OnError(Func<IExperimentError, string> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            experiment.Steps.OnError = handler;
+            steps.OnError = handler;
             return this;
         }
 
@@ -72,54 +75,55 @@ namespace WeirdScience
         public IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            experiment.Steps.OnMismatch = handler;
+            steps.OnMismatch = handler;
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> PreCondition(Func<bool> runIf)
         {
             if (runIf == null) throw new ArgumentNullException("runIf");
-            experiment.Steps.PreCondition = runIf;
+            steps.PreCondition = runIf;
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> Prepare(Func<T, TPublish> prepare)
         {
             if (prepare == null) throw new ArgumentNullException("prepare");
-            experiment.Steps.Prepare = prepare;
+            steps.Prepare = prepare;
             return this;
         }
 
         public T Run()
         {
+            experiment.Steps = steps;
             return experiment.Run();
         }
 
         public IExperimentOptionsBuilder<T, TPublish> RunInParallel(Func<bool> conditional)
         {
             if (conditional == null) throw new ArgumentNullException("conditional");
-            experiment.Steps.RunInParallel = conditional;
+            steps.RunInParallel = conditional;
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> SetContext(Func<object> context)
         {
             if (context == null) throw new ArgumentNullException("context");
-            experiment.Steps.SetContext = context;
+            steps.SetContext = context;
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> SetTimeout(Func<long> timeout)
         {
             if (timeout == null) throw new ArgumentNullException("timeout");
-            experiment.Steps.SetTimeout = timeout;
+            steps.SetTimeout = timeout;
             return this;
         }
 
         public IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            experiment.Steps.Setup = handler;
+            steps.Setup = handler;
             return this;
         }
 
@@ -133,7 +137,7 @@ namespace WeirdScience
         public IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            experiment.Steps.Teardown = handler;
+            steps.Teardown = handler;
             return this;
         }
 

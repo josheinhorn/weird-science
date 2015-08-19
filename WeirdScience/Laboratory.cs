@@ -14,26 +14,23 @@ namespace WeirdScience
 
         public static IControlBuilder<T, T> DoScience<T>(string name, bool throwOnInternalExceptions = false)
         {
-            var experiment = new SimpleExperiment<T>(name, _publisher, throwOnInternalExceptions);
-            return new Laboratory<T, T>(experiment);
+            return new Laboratory<T, T>(name, _publisher, throwOnInternalExceptions);
         }
 
         public static IExperimentBuilder<T, T> DoScience<T>(string name, Func<T> control,
             bool throwOnInternalExceptions = false)
         {
-            var experiment = new SimpleExperiment<T>(name, _publisher, throwOnInternalExceptions);
-            experiment.Steps.Control = control;
-            return new CandidateBuilder<T, T>(experiment);
+            return new Laboratory<T, T>(name, _publisher, throwOnInternalExceptions)
+                .Control(control);
         }
 
         public static IExperimentBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
             Func<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
         {
-            //TOOD: publisher, error handler, etc
-            var experiment = new Experiment<T, TPublish>(name, _publisher, throwOnInternalExceptions);
-            experiment.Steps.Prepare = prepareResults;
-            experiment.Steps.Control = control;
-            return new CandidateBuilder<T, TPublish>(experiment);
+            var builder = new Laboratory<T, TPublish>(name, _publisher, throwOnInternalExceptions)
+                .Control(control);
+            builder.Prepare(prepareResults);
+            return builder;
         }
 
         public static void SetPublisher(ISciencePublisher publisher)
@@ -49,15 +46,20 @@ namespace WeirdScience
         #region Private Fields
 
         private IScienceExperiment<T, TPublish> experiment;
-
+        private IExperimentSteps<T, TPublish> steps;
         #endregion Private Fields
 
         #region Public Constructors
-
-        public Laboratory(IScienceExperiment<T, TPublish> experiment)
+        public Laboratory(IScienceExperiment<T, TPublish> experiment, IExperimentSteps<T, TPublish> steps)
         {
+            if (experiment == null) throw new ArgumentNullException("experiment");
+            if (steps == null) throw new ArgumentNullException("steps");
             this.experiment = experiment;
+            this.steps = steps;
         }
+        public Laboratory(IScienceExperiment<T, TPublish> experiment) 
+            : this(experiment, new ExperimentSteps<T,TPublish>())
+        { }
 
         public Laboratory(string name) : this(name, new ConsolePublisher())
         { }
@@ -76,18 +78,14 @@ namespace WeirdScience
 
         public IExperimentBuilder<T, TPublish> Candidate(string name, Func<T> candidate)
         {
-            if (experiment.Steps.Candidates.ContainsKey(name))
-            {
-                throw new ArgumentException("An Experiment with Name " + name + " has already been added!");
-            }
-            experiment.Steps.Candidates.Add(name, candidate);
-            return new CandidateBuilder<T, TPublish>(experiment);
+            steps.AddCandidate(name, candidate);
+            return new CandidateBuilder<T, TPublish>(experiment, steps);
         }
 
         public IExperimentBuilder<T, TPublish> Control(Func<T> control)
         {
-            experiment.Steps.Control = control;
-            return new CandidateBuilder<T, TPublish>(experiment);
+            steps.Control = control;
+            return new CandidateBuilder<T, TPublish>(experiment, steps);
         }
 
         #endregion Public Methods

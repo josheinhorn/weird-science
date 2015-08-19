@@ -8,7 +8,7 @@ namespace WeirdScience
 
         public ExperimentResult()
         {
-            CurrentState = new ExperimentState<T>();
+            LastState = new ExperimentState<T>();
             Candidates = new Dictionary<string, IObservation<T>>();
             Control = new Observation<T>();
         }
@@ -19,7 +19,7 @@ namespace WeirdScience
 
         public IDictionary<string, IObservation<T>> Candidates { get; internal set; }
         public IObservation<T> Control { get; set; }
-        public IExperimentState<T> CurrentState { get; internal set; }
+        public IExperimentState<T> LastState { get; internal set; }
         public string Name { get; internal set; }
 
         #endregion Public Properties

@@ -17,7 +17,7 @@ namespace WeirdScience
         {
             if (!string.IsNullOrEmpty(message))
                 messages.AppendFormat("  {3} - Message from Experiment '{0}' in Step '{1}': {2}\n",
-                    state.Name, state.Step, message, state.Timestamp.ToLongTimeString());
+                    state.Name, state.CurrentStep, message, state.Timestamp.ToLongTimeString());
         }
 
         public virtual void Publish<T>(IExperimentResult<T> results)
@@ -42,12 +42,12 @@ namespace WeirdScience
 
         #region Private Methods
 
-        private void PublishObservation<T>(IObservation<T> observation)
+        private static void PublishObservation<T>(IObservation<T> observation)
         {
             Console.WriteLine("  " + observation.Name);
             Console.WriteLine("    Took: {0} ms, Exception Thrown: {1}{2}, Output Value: {3}",
                 observation.ElapsedMilliseconds, observation.ExceptionThrown, observation.ExceptionThrown ?
-                string.Format("(Exception: {0})", observation.Error.LastException) : string.Empty,
+                string.Format("(Exception: {0})", observation.ExperimentError.LastException.Message) : string.Empty,
                 observation.Value);
         }
 

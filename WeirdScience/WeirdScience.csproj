@@ -20,6 +20,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <CodeAnalysisRuleSet>\\psf\Dev\MS_Basic.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -48,6 +50,7 @@
     <Compile Include="ExperimentResult.cs" />
     <Compile Include="ExperimentState.cs" />
     <Compile Include="ExperimentSteps.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Interfaces.cs" />
     <Compile Include="Laboratory.cs" />
     <Compile Include="Observation.cs" />

@@ -21,9 +21,9 @@ namespace WeirdScience
             get; set;
         }
 
-        public IDictionary<string, Func<T>> Candidates
+        private IDictionary<string, Func<T>> Candidates
         {
-            get; private set;
+            get; set;
         }
 
         public Func<T> Control
@@ -84,6 +84,25 @@ namespace WeirdScience
         public Func<string> Teardown
         {
             get; set;
+        }
+
+        public void AddCandidate(string name, Func<T> candidate)
+        {
+            if (name == null) throw new ArgumentNullException("name");
+            if (candidate == null) throw new ArgumentNullException("candidate");
+            if (!Candidates.ContainsKey(name))
+            {
+                Candidates.Add(name, candidate);
+            }
+            else
+            {
+                throw new ArgumentException("A Candidate with Name '" + name + "' has already been added!");
+            }
+        }
+
+        public IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates()
+        {
+            return Candidates;
         }
 
         #endregion Public Properties

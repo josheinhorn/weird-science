@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 
+[assembly: CLSCompliant(true)]
 namespace WeirdScience
 {
     public enum Operations
@@ -52,7 +53,7 @@ namespace WeirdScience
     {
         #region Public Methods
 
-        void HandleError(IExperimentError error);
+        void HandleError(IExperimentError expError);
 
         #endregion Public Methods
     }
@@ -69,7 +70,7 @@ namespace WeirdScience
         string ErrorMessage { get; }
         string ExperimentName { get; }
         Exception LastException { get; }
-        Operations Step { get; }
+        Operations LastStep { get; }
 
         #endregion Public Properties
     }
@@ -206,7 +207,7 @@ namespace WeirdScience
 
         IDictionary<string, IObservation<T>> Candidates { get; }
         IObservation<T> Control { get; set; }
-        IExperimentState<T> CurrentState { get; }
+        IExperimentState<T> LastState { get; }
         string Name { get; }
 
         #endregion Public Properties
@@ -217,15 +218,15 @@ namespace WeirdScience
         #region Public Properties
 
         string Name { get; set; }
-        Operations Step { get; set; }
+        Operations CurrentStep { get; set; }
 
-        DateTime Timestamp { get; set; }
+        DateTime Timestamp { get; }
 
         #endregion Public Properties
 
         #region Public Methods
 
-        IExperimentState<T> GetSnapshot();
+        IExperimentState<T> Snapshot();
 
         #endregion Public Methods
     }
@@ -235,8 +236,8 @@ namespace WeirdScience
         #region Public Properties
 
         Func<T, T, bool> AreEqual { get; set; }
-
-        IDictionary<string, Func<T>> Candidates { get; }
+        IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates();
+        void AddCandidate(string name, Func<T> candidate);
         Func<T> Control { get; set; }
         Func<T, T, bool> Ignore { get; set; }
         Func<IExperimentError, string> OnError { get; set; }
@@ -248,7 +249,6 @@ namespace WeirdScience
         Func<object> SetContext { get; set; }
         Func<long> SetTimeout { get; set; }
         Func<string> Setup { get; set; }
-
         Func<string> Teardown { get; set; }
 
         #endregion Public Properties
@@ -284,7 +284,7 @@ namespace WeirdScience
 
         object Context { get; }
         long ElapsedMilliseconds { get; }
-        IExperimentError Error { get; }
+        IExperimentError ExperimentError { get; }
         bool ExceptionThrown { get; }
         bool IsMismatched { get; }
         string Name { get; }
@@ -302,7 +302,8 @@ namespace WeirdScience
 
         string Name { get; }
 
-        IExperimentSteps<T, TPublish> Steps { get; }
+        //IExperimentState<TPublish> CurrentState { get; set; }
+        IExperimentSteps<T, TPublish> Steps { get; set; }
 
         #endregion Public Properties
 
@@ -314,7 +315,7 @@ namespace WeirdScience
 
         bool Ignore(T control, T candidate);
 
-        string OnError(IExperimentError error);
+        string OnError(IExperimentError expError);
 
         string OnMismatch(T control, T candidate, Exception controlException, Exception candidateException);
 

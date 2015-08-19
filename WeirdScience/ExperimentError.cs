@@ -21,7 +21,7 @@ namespace WeirdScience
             get; internal set;
         }
 
-        public Operations Step
+        public Operations LastStep
         {
             get; internal set;
         }

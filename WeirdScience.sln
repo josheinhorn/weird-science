@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience", "WeirdScienc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "Tester\Tester.csproj", "{A3F65501-A0E4-490C-B665-CEE11E534B38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience.Tests", "WeirdScience.Tests\WeirdScience.Tests.csproj", "{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A3F65501-A0E4-490C-B665-CEE11E534B38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
