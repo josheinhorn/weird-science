@@ -23,10 +23,10 @@ namespace WeirdScience
         public virtual void Publish<T>(IExperimentResult<T> results)
         {
             Console.WriteLine("*************** Experiment '{0}' Results ***************", results.Name);
-            PublishObservation<T>(results.Control);
+            PublishObservation(results.Control);
             foreach (var obs in results.Candidates)
             {
-                PublishObservation<T>(obs.Value);
+                PublishObservation(obs.Value);
             }
             Console.WriteLine(messages.ToString());
             var stars = new StringBuilder();

@@ -21,6 +21,7 @@ namespace WeirdScience
             if (experiment == null) throw new ArgumentNullException("experiment");
             if (steps == null) throw new ArgumentNullException("steps");
             this.experiment = experiment;
+            this.experiment.Steps = steps;
             this.steps = steps;
         }
 

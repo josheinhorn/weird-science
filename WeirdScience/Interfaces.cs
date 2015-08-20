@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 
-[assembly: CLSCompliant(true)]
 namespace WeirdScience
 {
     public enum Operations
@@ -143,7 +142,7 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> Prepare(Func<T, TPublish> prepare);
 
         /// <summary>
-        /// Runs the Experimnt and returns the result from the Control or throws the Exception that
+        /// Runs the Experiment and returns the result from the Control or throws the Exception that
         /// the Control throws.
         /// </summary>
         /// <returns></returns>
