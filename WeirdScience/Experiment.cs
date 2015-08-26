@@ -284,7 +284,6 @@ namespace WeirdScience
                             var context = Context();
                             Publish(Setup(), CurrentState.Snapshot());
                             timer.Restart();
-                            timer.Start();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
                             if (!Ignore(controlResult, candResult) &&
