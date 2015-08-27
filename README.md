@@ -84,6 +84,7 @@ A basic (albeit not very useful) example:
 ```C#
 public class ConsolePublisher : ISciencePublisher
 {
+    private StringBuilder messages = new StringBuilder();
     public virtual void Publish<T>(string message, IExperimentState<T> state)
     {
         if (!string.IsNullOrEmpty(message))
@@ -137,9 +138,10 @@ public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
   public MyCustomExperiment(string name, ISciencePublisher publisher)
     : base(string name, ISciencePublisher publisher)
     { }
-  public override string OnMismatch(T candidate, T control,
-    Exception candidateException, Exception controlException)
+  public override string OnMismatch(T control, T candidate,
+    Exception controlException, Exception candidateException)
   {
+      base.OnMismatch(control, candidate, controlException, candidateException, controlException);
       return string.Format("there was a mismatch: {0}, {1}, {2}, {3}",
         candidate, control, candidateException, controlException);
   }
@@ -156,11 +158,13 @@ myLab
    ...
 ```
 
+Note that the base implementation of each step handles Exceptions as well as sets the internal state of the Experiment to the current Step. This will be extracted out of the individual steps in the future so implementers do not need to worry about such inner workings.
+
 ## The Steps
-As you can see from the example, there are a number of optional steps that users can define when using the out-of-the-box functionality.
+As you can see from the earlier example, there are a number of optional steps that users can define when using the out-of-the-box functionality.
 
 ### Control
-This is possibly the most important step -- it is the actual function that should run for this Experiment. Its result will be used to compare to each of the Candidates and will be returned as the final output.
+This is possibly the most important step &mdash; it is the actual function that should run for this Experiment. Its result will be used to compare to each of the Candidates and will be returned as the final output.
 
 This Step runs for the Control.
 
@@ -202,7 +206,7 @@ This Step does _not_ run for the Control.
 _Delegate Type:_ `Func<T, T, bool>`
 
 ### AreEqual
-This function determines if two results are equivalent -- `true` if they are and `false` if they are not. The default for this is to use `EqualityComparer<T>.Default`.
+This function determines if two results are equivalent &mdash; `true` if they are and `false` if they are not. The default for this is to use `EqualityComparer<T>.Default`. There is no guarantee that both values are not null.
 
 This Step does _not_ run for the Control.
 
@@ -215,7 +219,7 @@ This function is invoked if a Candidate is not equal to the Control, if one thro
 
 This Step does _not_ run for the Control.
 
-_Delegate Type:_ `Func<T, T, Exception, Exception, string>` or `Action<T, T, Exception, Exception>`_
+_Delegate Type:_ `Func<T, T, Exception, Exception, string>` or `Action<T, T, Exception, Exception>`
 
 ### Prepare
 This function can transform or alter the result of the Control and Candidates before results are stored for Publish. This is most often used when the actual result object is large (e.g. list of complex objects) or when you actually only care about a very small part of the result object. This function may return the same Type as the Control/Candidate functions, or an entirely different Type.
