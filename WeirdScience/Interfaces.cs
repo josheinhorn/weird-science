@@ -248,7 +248,7 @@ namespace WeirdScience
         Func<T, T, Exception, Exception, string> OnMismatch { get; set; }
         Func<bool> PreCondition { get; set; }
         Func<T, TPublish> Prepare { get; set; }
-        Action<IExperimentResult<TPublish>> Publish { get; set; }
+        //Action<IExperimentResult<TPublish>> Publish { get; set; }
         Func<bool> RunInParallel { get; set; }
         Func<object> SetContext { get; set; }
         Func<long> SetTimeout { get; set; }

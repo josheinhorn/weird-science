@@ -18,10 +18,11 @@ string result = Laboratory.DoScience("Science!", () => DoSomething(foo))
    .OnMismatch((ctrl, cand, ctrlExcp, candExcp) => "Oops! Mismatch!!")
    .Ignore((ctrl, cand) => cand.StartsWith("Hello"))
    .OnError((err) => "Yikes, An error occurred!! " + err.ErrorMessage)
-   .Teardown(() => { foo.Remove("bar"); return "ending with " + foo.Count + " items."; })
+   .Teardown(() => { foo.Remove("bar"); return foo.Count + " items left.";})
    .Run(); //Executes everything and calls Publisher to write output
 
-ContinueOn(result); //result is the output from DoSomething(foo)
+// Continue execution of regular program, result is output from DoSomething(foo)
+...
 ```
 ## What do I use this for?
 Good question! Basically, you use it to set up "Experiments" that can run in sensitive (read 'Production') environments. An Experiment should really be thought of in the classical sense of the word &mdash; you run a set of Candidates against a Control and evaluate the results.
@@ -33,7 +34,7 @@ Another use case is when the stakes are simple too high to rely on test environm
 ## How it works
 Though you can't really tell from the simple example, an `IExperiment` object is getting configured by the fluent interface, and then executed by the `Run()` method.
 
-The Experiment internals take care handling Exceptions, running the Control and Candidates, tracking internal state, recording results to pass to the Publisher, and of course returning the exact result that the Control returns (including throwing an Exception if that is what the Control does).
+The Experiment internals take care of handling Exceptions, running the Control and Candidates, tracking internal state, recording results to pass to the Publisher, and of course returning the exact result that the Control returns (including throwing an Exception if that is what the Control does).
 
 When the Experiment is run, it uses the delegates to determine the flow of execution. For instance, the Experiment Candidates won't run unless the `PreCondition` delegate evaluates to `true`. The use of delegates allows users of Weird Science to customize each experiment with just a few lines of code instead of declaring entire classes for simple tasks (though as you'll see later you can also extend the `Experiment` class).
 
@@ -59,7 +60,7 @@ Each Candidate follows the same process (unless an internal error occurs)
   - Teardown
   - OnError
 
-It is important to note that OnError is only called when an Exception is thrown from within one of the steps (specifically in a provided delegate). If an Exception is thrown from within OnError, an internal exception occurs that will only be thrown if the proper flag is set (see below).
+It is important to note that `OnError` is only called when an Exception is thrown from within one of the steps (specifically in a provided delegate). If an Exception is thrown from within `OnError`, an internal exception occurs that will only be thrown if the proper flag is set (see below).
 
 ## The Publisher
 This is where the real magic happens. Users are required to write their own implementations of the `ISciencePublisher` interface in order to fully take advantage of Weird Science. There are only two methods to implement:
@@ -106,7 +107,7 @@ public class ConsolePublisher : ISciencePublisher
     private static void PublishObservation<T>(IObservation<T> observation)
     {
         Console.WriteLine(observation.Name);
-        Console.WriteLine("Took: {0} ms, Exception Thrown: {1}{2}, Output Value: {3}",
+        Console.WriteLine("Took: {0} ms, Exception?: {1}{2}, Output Value: {3}",
             observation.ElapsedMilliseconds, observation.ExceptionThrown,
             observation.ExceptionThrown ? string.Format("(Exception: {0})",
             observation.ExperimentError.LastException.Message)
@@ -131,7 +132,7 @@ If you desire a bit more control over your workspace, you can instantiate your o
 If you're feeling even more adventurous, you can even pass in a custom `IExperiment` to the `Laboratory`!
 
 ## The Experiment
-Behind the scenes of the `Laboratory`, the majority of work is actually being done by an `IExperiment` object. The basic implementation is `WeirdScience.Experiment` but users of the library are more than welcome to extend and override certain methods to give even greater control. For instance, you might _always_ want to do the exact same thing for the OnMismatch step. Instead of passing the same delegate all the time, you could create your own `Experiment`:
+Behind the scenes of the `Laboratory`, the majority of work is actually being done by an `IExperiment` object. The basic implementation is `WeirdScience.Experiment` but users of the library are more than welcome to extend and override certain methods to give even greater control. For instance, you might _always_ want to do the exact same thing for the `OnMismatch` step. Instead of passing the same delegate all the time, you could create your own `Experiment`:
 
 ```C#
 public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
@@ -142,7 +143,8 @@ public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
   public override string OnMismatch(T control, T candidate,
     Exception controlException, Exception candidateException)
   {
-      //Can still use a delegate in addition to custom implementation by calling Base method
+      // Can still use delegates in addition to custom implementation
+      // by calling the Base method
       var baseMsg = base.OnMismatch(control, candidate, controlException,
         candidateException, controlException);
       return string.Format("There was a mismatch: {0}, {1}, {2}, {3}",
@@ -161,7 +163,7 @@ myLab
    ...
 ```
 
-Note that the base implementation of handles Exceptions and tracking State, so implementers do not need to worry about the internal details.
+The base implementation of `Experiment` handles Exceptions and tracking state, so implementers do not need to worry about the internal details.
 
 ## The Steps
 As you can see from the earlier example, there are a number of optional steps that users can define when using the out-of-the-box functionality.
@@ -246,3 +248,12 @@ This function runs when an Exception is thrown by one of the other steps. It wil
 This Step _does_ run for the Control.
 
 _Delegate Type:_ `Func<IExperimentError, string>` _or_ `Action<IExperimentError>`
+
+## Future work
+There are definite plans to add two additional steps, `SetTimeout` and `OnTimeout`. These steps will allow users to define the maximum amount of time the Experiment should wait for Candidate results before moving on and then take an action if there is a time out.
+
+Having a time out value is meant to be used in situations where the performance of a Candidate is unknown or when the execution of the program simple cannot afford to wait.
+
+One possible use of the `OnTimeout` step could be to set a state (e.g. static variable) that would be used in the `PreCondition` step to activate/deactive certain Experiments when performance is suffering.
+
+There is also a tentative plan to add a `RunInParallel` step which would return a `bool` that determines if the Candidates should run on separate Threads. This could potentially speed up performance but would greatly increase the complexity of running an Experiment since users would have to address concurrency issues with shared resources.
