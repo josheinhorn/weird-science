@@ -6,6 +6,7 @@ namespace WeirdScience
 {
     public enum Operations
     {
+        Internal = 0, //Exception happened in WeirdScience code, this is default
         Setup,
         PreCondition,
         Control,
@@ -20,8 +21,7 @@ namespace WeirdScience
         SetTimeout,
         Prepare,
         Teardown,
-        Complete,
-        Internal = 0 //Exception happened in WeirdScience code, this is default
+        Complete
     }
 
     public interface ICandidateBuilder<T, TPublish> : IFluentSyntax
@@ -147,7 +147,11 @@ namespace WeirdScience
         /// </summary>
         /// <returns></returns>
         T Run();
-
+        /// <summary>
+        /// Not currently implemented.
+        /// </summary>
+        /// <param name="conditional"></param>
+        /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> RunInParallel(Func<bool> conditional); //future!
 
         /// <summary>
@@ -159,6 +163,7 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> SetContext(Func<object> context);
 
         /// <summary>
+        /// Not currently implemented.
         /// Sets a method to determine the timeout in milliseconds. The Experiment will run this
         /// amount of time for each Candidate before moving on. Setting this method will force the
         /// Experiment to run each Candidate in a separate Thread. The Experiment will NOT
@@ -310,7 +315,7 @@ namespace WeirdScience
 
         bool AreEqual(T control, T candidate);
 
-        object Context();
+        object SetContext();
 
         bool Ignore(T control, T candidate);
 
@@ -334,7 +339,7 @@ namespace WeirdScience
 
         string Teardown();
 
-        long Timeout();
+        long SetTimeout();
 
         #endregion Public Methods
     }

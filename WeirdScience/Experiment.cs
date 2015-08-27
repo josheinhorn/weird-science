@@ -7,8 +7,7 @@ namespace WeirdScience
     // Consider state machine or state pattern? State pattern would make it harder to extend right?
     // Experiment is the primary point of Extensibility
 
-    // TODO: Should there be an experiment with no Generic e.g. returns Void? What would that even do?
-
+    // TODO: Move all error handling out of the Steps methods so extenders 
     public class Experiment<T, TPublish> : IScienceExperiment<T, TPublish>
     {
         #region Private Fields
@@ -77,107 +76,67 @@ namespace WeirdScience
 
         public virtual bool AreEqual(T control, T candidate)
         {
-            CurrentState.CurrentStep = Operations.AreEqual;
-            return TryStep(() =>
-            {
-                return Steps.AreEqual == null ?
+            return Steps.AreEqual == null ?
                 EqualityComparer<T>.Default.Equals(control, candidate)
                 : Steps.AreEqual(control, candidate);
-            });
         }
 
-        public virtual object Context()
+        public virtual object SetContext()
         {
-            CurrentState.CurrentStep = Operations.SetContext;
-            return TryStep(() =>
-            {
-                return Steps.SetContext != null ? Steps.SetContext() : null;
-            });
+            return Steps.SetContext != null ? Steps.SetContext() : null;
         }
 
         public virtual bool Ignore(T control, T candidate)
         {
-            CurrentState.CurrentStep = Operations.Ignore;
-            return TryStep(() =>
-            {
-                return Steps.Ignore == null ? false : Steps.Ignore(control, candidate);
-            });
+            return Steps.Ignore == null ? false : Steps.Ignore(control, candidate);
         }
 
         public virtual string OnError(IExperimentError error)
         {
-            CurrentState.CurrentStep = Operations.OnError;
-            if (error == null) throw new ArgumentNullException("error");
-            return TryStep(() =>
-            {
-                if (Steps.OnError != null) return Steps.OnError(error);
-                return string.Empty;
-            });
+            return Steps.OnError != null ? Steps.OnError(error) : string.Empty;
         }
 
         public virtual string OnMismatch(T control, T candidate,
             Exception controlException, Exception candidateException)
         {
-            CurrentState.CurrentStep = Operations.OnMismatch;
-            return TryStep(() =>
-            {
-                if (Steps.OnMismatch != null)
-                    return Steps.OnMismatch(control, candidate, controlException, candidateException);
-                return string.Empty;
-            });
+            return Steps.OnMismatch != null ?
+                Steps.OnMismatch(control, candidate, controlException, candidateException)
+                : string.Empty;
         }
 
         public virtual bool PreCondition()
         {
-            CurrentState.CurrentStep = Operations.PreCondition;
-            return TryStep(() =>
-            {
-                return Steps.PreCondition == null ? true : Steps.PreCondition();
-            });
+            return Steps.PreCondition == null ? true : Steps.PreCondition();
         }
 
         public virtual TPublish Prepare(T result)
         {
-            CurrentState.CurrentStep = Operations.Prepare;
-            return TryStep(() =>
+            if (Steps.Prepare == null)
             {
-                if (Steps.Prepare == null)
+                if (typeof(TPublish).IsAssignableFrom(typeof(T)))
                 {
-                    if (typeof(TPublish).IsAssignableFrom(typeof(T)))
-                    {
-                        return (TPublish)(object)result;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException(
-                            string.Format("No Prepare method is available and cannot cast Type '{0}'"
-                            + " to Type '{1}'.", typeof(T).FullName, typeof(TPublish).FullName));
-                    }
+                    return (TPublish)(object)result;
                 }
-                else return Steps.Prepare(result);
-            });
+                else
+                {
+                    throw new InvalidOperationException(
+                        string.Format("No Prepare method is available and cannot cast Type '{0}'"
+                        + " to Type '{1}'.", typeof(T).FullName, typeof(TPublish).FullName));
+                }
+            }
+            else return Steps.Prepare(result);
         }
 
         public virtual void Publish(IExperimentResult<TPublish> results)
         {
-            CurrentState.CurrentStep = Operations.Publish;
-            TryStep(() =>
-            {
-                if (Publisher != null)
-                    Publisher.Publish(results);
-                return 0;
-            });
+            if (Publisher != null)
+                Publisher.Publish(results);
         }
 
         public virtual void Publish(string message, IExperimentState<TPublish> state)
         {
-            CurrentState.CurrentStep = Operations.Publish;
-            TryStep(() =>
-            {
-                if (Publisher != null)
-                    Publisher.Publish(message, state);
-                return 0;
-            });
+            if (Publisher != null)
+                Publisher.Publish(message, state);
         }
 
         public T Run() //Should this be virtual? overriding this breaks the class' logic, so no
@@ -208,7 +167,7 @@ namespace WeirdScience
             try
             {
                 RunCandidates(results, controlValue, controlException);
-                Publish(results);
+                TryPublish(results);
             }
             catch (Exception)
             {
@@ -224,40 +183,22 @@ namespace WeirdScience
 
         public virtual bool RunInParallel()
         {
-            CurrentState.CurrentStep = Operations.RunInParallel;
-            return TryStep(() =>
-            {
-                return Steps.RunInParallel == null ? false : Steps.RunInParallel();
-            });
+            return Steps.RunInParallel == null ? false : Steps.RunInParallel();
         }
 
         public virtual string Setup()
         {
-            CurrentState.CurrentStep = Operations.Setup;
-            return TryStep(() =>
-            {
-                if (Steps.Setup != null) return Steps.Setup();
-                return string.Empty;
-            });
+            return Steps.Setup != null ? Steps.Setup() : string.Empty;
         }
 
         public virtual string Teardown()
         {
-            CurrentState.CurrentStep = Operations.Teardown;
-            return TryStep(() =>
-            {
-                if (Steps.Teardown != null) return Steps.Teardown();
-                return string.Empty;
-            });
+            return Steps.Teardown != null ? Steps.Teardown() : string.Empty;
         }
 
-        public virtual long Timeout()
+        public virtual long SetTimeout()
         {
-            CurrentState.CurrentStep = Operations.SetTimeout;
-            return TryStep(() =>
-            {
-                return Steps.SetTimeout == null ? 0 : Steps.SetTimeout();
-            });
+            return Steps.SetTimeout == null ? 0 : Steps.SetTimeout();
         }
 
         #endregion Public Methods
@@ -279,22 +220,23 @@ namespace WeirdScience
                     {
                         //Should this be a State machine?
                         CurrentState.Name = candidate.Key;
-                        if (PreCondition() && candidate.Value != null)
+                        if (TryPreCondition() && candidate.Value != null)
                         {
-                            var context = Context();
-                            Publish(Setup(), CurrentState.Snapshot());
+                            var context = TrySetContext();
+                            var msg = TrySetup();
+                            TryPublish(msg, CurrentState.Snapshot());
                             timer.Restart();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
-                            if (!Ignore(controlResult, candResult) &&
-                                (controlException != null || !AreEqual(controlResult, candResult)))
+                            if (!TryIgnore(controlResult, candResult) &&
+                                (controlException != null || !TryAreEqual(controlResult, candResult)))
                             {
                                 mismatched = true;
-                                var misMessage = OnMismatch(controlResult, candResult, controlException, null);
-                                Publish(misMessage, CurrentState.Snapshot());
+                                TryOnMismatchAndPublish(controlResult, candResult, controlException, null);
                             }
-                            candValue = Prepare(candResult);
-                            Publish(Teardown(), CurrentState.Snapshot());
+                            candValue = TryPrepare(candResult);
+                            msg = TryTeardown();
+                            TryPublish(msg, CurrentState.Snapshot());
                             if (!results.Candidates.ContainsKey(candidate.Key))
                             {
                                 results.Candidates.Add(candidate.Key,
@@ -318,14 +260,13 @@ namespace WeirdScience
                     {
                         timer.Stop();
                         //it's possible for this to throw, which would result in an internal exception
-                        Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
+                        TryOnErrorAndPublish(sfe.ExperimentError);
                         if (!exceptionComparer.Equals(sfe.ExperimentError.LastException, controlException))
                         {
                             //It's a mismatch if the exceptions don't match
                             mismatched = true;
-                            var misMessage = OnMismatch(controlResult, candResult,
+                            TryOnMismatchAndPublish(controlResult, candResult,
                                 controlException, sfe.ExperimentError.LastException); //potential throw
-                            Publish(misMessage, CurrentState.Snapshot());
                         }
                         var errResult = new Observation<TPublish>
                         {
@@ -360,15 +301,16 @@ namespace WeirdScience
             TPublish value = default(TPublish);
             try
             {
-                context = Context();
+                context = TrySetContext();
             }
             catch (StepFailedException sfe)
             {
-                Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
+                TryOnErrorAndPublish(sfe.ExperimentError);
                 //We'll still run the Control even without a context
             }
             var timer = new Stopwatch();
-            CurrentState.CurrentStep = Operations.Control; try
+            CurrentState.CurrentStep = Operations.Control;
+            try
             {
                 timer.Start();
                 result = Steps.Control();
@@ -386,7 +328,7 @@ namespace WeirdScience
                         + e.Message,
                     ExperimentName = ControlName
                 };
-                Publish(OnError(error), CurrentState.Snapshot());//TODO: Should we run OnError on Control??
+                TryOnErrorAndPublish(error);//TODO: Should we run OnError on Control??
                 results.Control = new Observation<TPublish>
                 {
                     ExperimentError = error,
@@ -401,12 +343,12 @@ namespace WeirdScience
             bool excpThrown = false;
             try
             {
-                value = Prepare(result);
+                value = TryPrepare(result);
             }
             catch (StepFailedException sfe)
             {
                 excpThrown = true;
-                Publish(OnError(sfe.ExperimentError), CurrentState.Snapshot());
+                TryOnErrorAndPublish(sfe.ExperimentError);
                 //We must continue on because we've already gotten a result
             }
             results.Control = new Observation<TPublish>
@@ -421,18 +363,11 @@ namespace WeirdScience
             return result;
         }
 
-        private T TryCandidate(Func<T> candidate)
+        private TOut TryOp<TOut>(Func<TOut> tryOp)
         {
-            CurrentState.CurrentStep = Operations.Candidate;
-            return TryStep(candidate);
-        }
-
-        private TOut TryStep<TOut>(Func<TOut> tryOp)
-        {
-            TOut result = default(TOut);
             try
             {
-                result = tryOp();
+                return tryOp();
             }
             catch (Exception e)
             {
@@ -447,8 +382,96 @@ namespace WeirdScience
                 };
                 throw new StepFailedException(error);
             }
-            return result;
         }
+
+        #region Try Steps
+        private T TryCandidate(Func<T> candidate)
+        {
+            CurrentState.CurrentStep = Operations.Candidate;
+            return TryOp(candidate);
+        }
+        private bool TryAreEqual(T control, T candidate)
+        {
+            CurrentState.CurrentStep = Operations.AreEqual;
+            return TryOp(() => AreEqual(control, candidate));
+        }
+
+        private object TrySetContext()
+        {
+            CurrentState.CurrentStep = Operations.SetContext;
+            return TryOp(SetContext);
+        }
+
+        private bool TryIgnore(T control, T candidate)
+        {
+            CurrentState.CurrentStep = Operations.Ignore;
+            return TryOp(() => Ignore(control, candidate));
+        }
+
+        private void TryOnErrorAndPublish(IExperimentError error)
+        {
+            if (error == null) throw new ArgumentNullException("error");
+            CurrentState.CurrentStep = Operations.OnError;
+            var msg = TryOp(() => OnError(error));
+            TryPublish(msg, CurrentState.Snapshot());
+        }
+
+        private void TryOnMismatchAndPublish(T control, T candidate,
+            Exception controlException, Exception candidateException)
+        {
+            CurrentState.CurrentStep = Operations.OnMismatch;
+            var msg = TryOp(() => OnMismatch(control, candidate, controlException, candidateException));
+            TryPublish(msg, CurrentState.Snapshot());
+        }
+
+        private bool TryPreCondition()
+        {
+            CurrentState.CurrentStep = Operations.PreCondition;
+            return TryOp(PreCondition);
+        }
+
+        private TPublish TryPrepare(T result)
+        {
+            CurrentState.CurrentStep = Operations.Prepare;
+            return TryOp(() => Prepare(result));
+        }
+
+        private void TryPublish(IExperimentResult<TPublish> results)
+        {
+            CurrentState.CurrentStep = Operations.Publish;
+            TryOp(() => { Publish(results); return 0; });
+        }
+
+        private void TryPublish(string message, IExperimentState<TPublish> state)
+        {
+            CurrentState.CurrentStep = Operations.Publish;
+            TryOp(() => { Publish(message, state); return 0; });
+        }
+
+        private bool TryRunInParallel()
+        {
+            CurrentState.CurrentStep = Operations.RunInParallel;
+            return TryOp(RunInParallel);
+        }
+
+        private string TrySetup()
+        {
+            CurrentState.CurrentStep = Operations.Setup;
+            return TryOp(Setup);
+        }
+
+        private string TryTeardown()
+        {
+            CurrentState.CurrentStep = Operations.Teardown;
+            return TryOp(Teardown);
+        }
+
+        private long TrySetTimeout()
+        {
+            CurrentState.CurrentStep = Operations.SetTimeout;
+            return TryOp(SetTimeout);
+        }
+        #endregion Try Steps
 
         #endregion Private Methods
     }

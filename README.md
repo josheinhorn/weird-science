@@ -24,9 +24,9 @@ string result = Laboratory.DoScience("Science!", () => DoSomething(foo))
 ContinueOn(result); //result is the output from DoSomething(foo)
 ```
 ## What do I use this for?
-Good question! Basically, you use it to set up "Experiments" that can run in sensitive (read 'Production') environments. An Experiment should really be thought of like in the classical sense of the word -- you run a set of Candidates against a Control and evaluate the results.
+Good question! Basically, you use it to set up "Experiments" that can run in sensitive (read 'Production') environments. An Experiment should really be thought of in the classical sense of the word &mdash; you run a set of Candidates against a Control and evaluate the results.
 
-One intended use case is when Unit Tests, Integration Tests, and QA tests are impractical. This is when it is simply too difficult to predict or recreate the conditions that exist in a Production environment, such as high load or unknown database states.
+One intended use case is when Unit Tests, Integration Tests, and QA tests are impractical. This is when it is simply too difficult to predict or recreate the conditions that exist in a Production environment, such as high load or unknown/inconsistent data states.
 
 Another use case is when the stakes are simple too high to rely on test environments to properly evaluate impacts of major changes before rolling out to Production. How many times has your boss or coworker told you not to refactor a set of classes because the risk of breaking Production is too high?
 
@@ -35,7 +35,7 @@ Though you can't really tell from the simple example, an `IExperiment` object is
 
 The Experiment internals take care handling Exceptions, running the Control and Candidates, tracking internal state, recording results to pass to the Publisher, and of course returning the exact result that the Control returns (including throwing an Exception if that is what the Control does).
 
-When the Experiment is run, it uses the delegates to determine the flow of execution. For instance, the Experiment Candidates won't run unless the `PreCondition` delegate evaluates to `true`. This allows users of Weird Science
+When the Experiment is run, it uses the delegates to determine the flow of execution. For instance, the Experiment Candidates won't run unless the `PreCondition` delegate evaluates to `true`. The use of delegates allows users of Weird Science to customize each experiment with just a few lines of code instead of declaring entire classes for simple tasks (though as you'll see later you can also extend the `Experiment` class).
 
 At a high level, general flow of execution (while handling Exceptions and tracking state) is
 
@@ -88,8 +88,9 @@ public class ConsolePublisher : ISciencePublisher
     public virtual void Publish<T>(string message, IExperimentState<T> state)
     {
         if (!string.IsNullOrEmpty(message))
-            messages.AppendFormat("  {3} - Message from Experiment '{0}' in Step '{1}': {2}\n",
-                state.Name, state.CurrentStep, message, state.Timestamp.ToLongTimeString());
+            messages.AppendFormat("{3} - Message from Experiment '{0}' in Step "
+            + "'{1}': {2}\n", state.Name, state.CurrentStep, message,
+            state.Timestamp.ToLongTimeString());
     }
     public virtual void Publish<T>(IExperimentResult<T> results)
     {
@@ -141,8 +142,10 @@ public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
   public override string OnMismatch(T control, T candidate,
     Exception controlException, Exception candidateException)
   {
-      base.OnMismatch(control, candidate, controlException, candidateException, controlException);
-      return string.Format("there was a mismatch: {0}, {1}, {2}, {3}",
+      //Can still use a delegate in addition to custom implementation by calling Base method
+      var baseMsg = base.OnMismatch(control, candidate, controlException,
+        candidateException, controlException);
+      return string.Format("There was a mismatch: {0}, {1}, {2}, {3}",
         candidate, control, candidateException, controlException);
   }
 }
@@ -158,7 +161,7 @@ myLab
    ...
 ```
 
-Note that the base implementation of each step handles Exceptions as well as sets the internal state of the Experiment to the current Step. This will be extracted out of the individual steps in the future so implementers do not need to worry about such inner workings.
+Note that the base implementation of handles Exceptions and tracking State, so implementers do not need to worry about the internal details.
 
 ## The Steps
 As you can see from the earlier example, there are a number of optional steps that users can define when using the out-of-the-box functionality.
@@ -171,7 +174,7 @@ This Step runs for the Control.
 _Delegate Type:_ `Func<T>`
 
 ### PreCondition
-This is a function that determines whether or not the Experiment should actually run a Candidate, including all of the subsequent steps. If this evaluates to `false`, none of the other steps will run for the Candidate.
+This is a function that determines whether or not the Experiment should actually run a Candidate, including all of the subsequent steps. If this evaluates to `false`, none of the other steps will run for the Candidate. This allows users to limit the effects of running Experiments in Production by limiting when an Experiment is allowed to run. This could be as simple as running Candidates only a percentage of the time or as complex as checking the time of day and the CPU/Memory load of the running Process.
 
 This Step does _not_ run for the Control.
 
@@ -213,7 +216,7 @@ This Step does _not_ run for the Control.
 _Delegate Type:_ `Func<T, T, bool>`
 
 ### OnMismatch
-This function is invoked if a Candidate is not equal to the Control, if one throws and Exception and the other does not, or if both throw Exceptions but the Exceptions are not equal. It can optionally return a `string` message that will be passed to the Publisher along with the current state of the Experiment.  
+This function is invoked if a Candidate result is not equal to the Control result, if one throws and Exception and the other does not, or if both throw Exceptions but the Exceptions are not equal. It can optionally return a `string` message that will be passed to the Publisher along with the current state of the Experiment.  
 
 **_Important_**: Because this step runs when Exceptions are thrown, there is very little fallback if this method throws an Exception. Though Weird Science _does_ handle such Exceptions, the Experiment execution is completely interrupted.
 
