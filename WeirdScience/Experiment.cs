@@ -341,6 +341,7 @@ namespace WeirdScience
                 return result;
             }
             bool excpThrown = false;
+            IExperimentError prepareError = null;
             try
             {
                 value = TryPrepare(result);
@@ -348,7 +349,8 @@ namespace WeirdScience
             catch (StepFailedException sfe)
             {
                 excpThrown = true;
-                TryOnErrorAndPublish(sfe.ExperimentError);
+                prepareError = sfe.ExperimentError;
+                TryOnErrorAndPublish(prepareError);
                 //We must continue on because we've already gotten a result
             }
             results.Control = new Observation<TPublish>
@@ -358,6 +360,7 @@ namespace WeirdScience
                 Name = ControlName,
                 IsMismatched = false, //Control can't be mismatched
                 ExceptionThrown = excpThrown,
+                ExperimentError = prepareError,
                 Value = value
             };
             return result;
