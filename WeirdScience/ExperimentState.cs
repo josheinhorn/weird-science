@@ -2,13 +2,13 @@
 
 namespace WeirdScience
 {
-    internal class ExperimentState<T> : IExperimentState<T>
+    internal class ExperimentState<T> : IExperimentState
     {
         #region Private Fields
 
         private string _name;
         private Operations _step;
-
+        private object _context;
         #endregion Private Fields
 
         #region Public Properties
@@ -27,13 +27,19 @@ namespace WeirdScience
 
         public DateTime Timestamp { get; private set; }
 
+        public object Context
+        {
+            get { return _context; }
+            set { _context = value; Timestamp = DateTime.UtcNow; }
+        }
+
         #endregion Public Properties
 
         #region Public Methods
 
-        public IExperimentState<T> Snapshot()
+        public IExperimentState Snapshot()
         {
-            return MemberwiseClone() as IExperimentState<T>;
+            return MemberwiseClone() as IExperimentState;
         }
 
         #endregion Public Methods

@@ -44,9 +44,12 @@
   <ItemGroup>
     <Compile Include="CandidateBuilder.cs" />
     <Compile Include="ConsolePublisher.cs" />
+    <Compile Include="MismatchEventArgs .cs" />
+    <Compile Include="ErrorEventArgs.cs" />
     <Compile Include="ExceptionEqualityComparer.cs" />
     <Compile Include="Experiment.cs" />
     <Compile Include="ExperimentError.cs" />
+    <Compile Include="ExperimentEventArgs.cs" />
     <Compile Include="ExperimentResult.cs" />
     <Compile Include="ExperimentState.cs" />
     <Compile Include="ExperimentSteps.cs" />

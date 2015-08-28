@@ -22,7 +22,7 @@ namespace WeirdScience.Tests
                     .Returns(new Dictionary<string, Func<string>> { { candName, () => candResult } });
             }
 
-            protected void SetupStateSnapshot(Mock<IExperimentState<string>> state)
+            protected void SetupStateSnapshot(Mock<IExperimentState> state)
             {
                 Operations step = Operations.Internal;
                 state.SetupGet(x => x.CurrentStep).Returns(() => step);
@@ -31,7 +31,7 @@ namespace WeirdScience.Tests
                 state.Setup(x => x.Snapshot())
                     .Returns(() =>
                     {
-                        var ss = Mock.Of<IExperimentState<string>>();
+                        var ss = Mock.Of<IExperimentState>();
                         ss.CurrentStep = step;
                         return ss;
                     });
@@ -49,7 +49,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void AreEqual(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -58,15 +58,16 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.AreEqual;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.AreEqual;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns(areEqual);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -75,7 +76,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //no exception
                 //Verify
                 steps.Verify(x => x.AreEqual, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.AreEqual)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -84,13 +87,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.AreEqual))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void Candidate(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName, InvalidProgramException excp,
                 string errMsg)
             {
@@ -98,10 +101,10 @@ namespace WeirdScience.Tests
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Candidate;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Candidate;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 Func<string> candidate = () =>
                 {
@@ -110,7 +113,8 @@ namespace WeirdScience.Tests
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 steps.Setup(x => x.GetCandidates())
                     .Returns(new Dictionary<string, Func<string>> { { candName, candidate } });
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
                 //Exercise
@@ -118,7 +122,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //No exceptions should be thrown
                 //Verify
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.AreEqual)), Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Candidates.All(kvp => kvp.Key.Equals(candName) && kvp.Value.ExceptionThrown
@@ -126,13 +132,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastException == excp
                     && kvp.Value.ExperimentError.LastStep == Operations.Candidate))), Times.Once);
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void Control(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName, InvalidProgramException excp,
                 string errMsg)
             {
@@ -167,14 +173,14 @@ namespace WeirdScience.Tests
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == excp
                     && r.Control.ExperimentError.LastStep == Operations.Control)), Times.Once);
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
                 Assert.Equal(result, excp);
             }
 
             [Theory, AutoMoqData]
             public void Control_Not_Set(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName)
             {
                 //Setup
@@ -192,13 +198,13 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 // Nothing published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
-                publisher.Verify(x => x.Publish(It.IsAny<string>(), It.IsAny<IExperimentState<string>>()),
+                publisher.Verify(x => x.Publish(It.IsAny<string>(), It.IsAny<IExperimentState>()),
                     Times.Never);
             }
 
             [Theory, AutoMoqData]
             public void Ignore(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -233,13 +239,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.Ignore))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void OnError_And_Control_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName, InvalidProgramException onErrorExcp,
                 ApplicationException ctrlExcp)
             {
@@ -269,13 +275,13 @@ namespace WeirdScience.Tests
                     r => !r.Control.ExceptionThrown && r.Control.ExperimentError == null)), Times.AtLeastOnce);
                 //Error Message NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<string>(),
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.Never);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.Never);
                 Assert.Equal(result, ctrlExcp); //Still throws the right exception
             }
 
             [Theory, AutoMoqData]
             public void OnError_And_Control_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName, InvalidProgramException onErrorExcp,
                 ApplicationException ctrlExcp)
             {
@@ -304,13 +310,13 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<string>(),
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.Never);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.Never);
                 Assert.Equal(result.InnerException, onErrorExcp); // Inner comes from OnError, not Control
             }
 
             [Theory, AutoMoqData]
             public void OnError_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp,
                 ApplicationException otherExcp)
             {
@@ -341,13 +347,13 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<string>(),
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.Never);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.Never);
                 Assert.Equal(result, ctrlResult);
             }
 
             [Theory, AutoMoqData]
             public void OnError_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult,
                string candName, InvalidProgramException excp, ApplicationException otherExcp)
             {
@@ -378,13 +384,13 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<string>(),
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.Never);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.Never);
                 Assert.Equal(result.InnerException, excp);
             }
 
             [Theory, AutoMoqData]
             public void OnMismatch_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -416,14 +422,14 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
                 Assert.Equal(result, ctrlResult);
             }
 
             [Theory, AutoMoqData]
             public void OnMismatch_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -456,14 +462,14 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
                 Assert.Equal(result.InnerException, excp);
             }
 
             [Theory, AutoMoqData]
             public void PreCondition(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -498,13 +504,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.PreCondition))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void Prepare(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -540,13 +546,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.Prepare))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void SetContext(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string ctxt,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string ctxt,
                string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -583,13 +589,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.SetContext))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void Setup(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string msg,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string msg,
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -626,13 +632,13 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.Setup))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
             [Theory, AutoMoqData]
             public void Teardown(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string msg,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string msg,
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
@@ -669,7 +675,7 @@ namespace WeirdScience.Tests
                     && kvp.Value.ExperimentError.LastStep == Operations.Teardown))), Times.Once);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
-                   It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
+                   It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
                 Assert.True(excpPassed);
             }
 
@@ -686,7 +692,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void AreEqual(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                string candName)
             {
                 //Setup
@@ -713,7 +719,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Candidate_Exception_Thrown(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName, InvalidProgramException excp)
             {
                 //Setup
@@ -745,7 +751,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Candidate_No_Exception(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName)
             {
                 //Setup
@@ -766,7 +772,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Control_And_Candidate_Throw_Different_Exceptions(Mock<ISciencePublisher> publisher,
-               Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+               Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                string name, string candName, InvalidProgramException ctrlExcp, ApplicationException candExcp)
             {
                 //Setup
@@ -800,7 +806,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Control_And_Candidate_Throw_Same_Exception(Mock<ISciencePublisher> publisher,
-               Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+               Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                string name, string candName, InvalidProgramException excp)
             {
                 //Setup
@@ -833,7 +839,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Control_Exception_Thrown(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName, InvalidProgramException excp)
             {
                 //Setup
@@ -863,7 +869,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Control_No_Exception(Mock<ISciencePublisher> publisher,
-                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state, string name,
                 string ctrlResult, string candResult, string candName)
             {
                 //Setup
@@ -884,7 +890,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Ignore(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                 string candName)
             {
                 //Setup
@@ -911,7 +917,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void OnMismatch(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                string candName, string msg)
             {
                 //Setup
@@ -935,13 +941,13 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
-                    It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.OnMismatch)), Times.AtLeastOnce);
+                    It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnMismatch)), Times.AtLeastOnce);
                 Assert.True(mismatchedCalled);
             }
 
             [Theory, AutoMoqData]
             public void PreCondition(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                 string candName)
             {
                 //Setup
@@ -967,7 +973,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Prepare(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                string candName, string prepared)
             {
                 //Setup
@@ -996,7 +1002,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void SetContext(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string ctxt,
+               Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string ctxt,
                string candName)
             {
                 //Setup
@@ -1022,7 +1028,7 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void Setup(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string msg,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string msg,
                 string candName)
             {
                 //Setup
@@ -1043,12 +1049,12 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.Setup, Times.AtLeastOnce); //Setup called
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
-                    It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.Setup)), Times.AtLeastOnce);
+                    It.Is<IExperimentState>(y => y.CurrentStep == Operations.Setup)), Times.AtLeastOnce);
             }
 
             [Theory, AutoMoqData]
             public void Teardown(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string msg,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult, string msg,
                 string candName)
             {
                 //Setup
@@ -1069,7 +1075,7 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.Teardown, Times.AtLeastOnce); //Teardown called
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
-                    It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);
+                    It.Is<IExperimentState>(y => y.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);
             }
 
             #endregion Public Methods

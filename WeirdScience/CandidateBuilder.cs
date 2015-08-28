@@ -52,31 +52,17 @@ namespace WeirdScience
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> OnError(Action<IExperimentError> handler)
+        public IExperimentOptionsBuilder<T, TPublish> OnError(EventHandler<IErrorEventArgs> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            OnError((error) => { handler(error); return string.Empty; });
+            steps.OnErrorEvent += handler;
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> OnError(Func<IExperimentError, string> handler)
+        public IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<IMismatchEventArgs<T>> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            steps.OnError = handler;
-            return this;
-        }
-
-        public IExperimentOptionsBuilder<T, TPublish> OnMismatch(Action<T, T, Exception, Exception> handler)
-        {
-            if (handler == null) throw new ArgumentNullException("handler");
-            OnMismatch((a, b, c, d) => { handler(a, b, c, d); return string.Empty; });
-            return this;
-        }
-
-        public IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler)
-        {
-            if (handler == null) throw new ArgumentNullException("handler");
-            steps.OnMismatch = handler;
+            steps.OnMismatchEvent += handler;
             return this;
         }
 
@@ -121,31 +107,17 @@ namespace WeirdScience
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler)
+        public IExperimentOptionsBuilder<T, TPublish> Setup(EventHandler<IExperimentEventArgs> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            steps.Setup = handler;
+            steps.SetupEvent += handler;
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> Setup(Action handler)
+        public IExperimentOptionsBuilder<T, TPublish> Teardown(EventHandler<IExperimentEventArgs> handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
-            Setup(() => { handler(); return string.Empty; });
-            return this;
-        }
-
-        public IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler)
-        {
-            if (handler == null) throw new ArgumentNullException("handler");
-            steps.Teardown = handler;
-            return this;
-        }
-
-        public IExperimentOptionsBuilder<T, TPublish> Teardown(Action handler)
-        {
-            if (handler == null) throw new ArgumentNullException("handler");
-            Teardown(() => { handler(); return string.Empty; });
+            steps.TeardownEvent += handler;
             return this;
         }
 

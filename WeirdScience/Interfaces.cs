@@ -48,6 +48,15 @@ namespace WeirdScience
         #endregion Public Methods
     }
 
+    public interface IErrorEventArgs : IExperimentEventArgs
+    {
+        #region Public Properties
+
+        IExperimentError Error { get; }
+
+        #endregion Public Properties
+    }
+
     public interface IErrorHandler
     {
         #region Public Methods
@@ -70,6 +79,16 @@ namespace WeirdScience
         string ExperimentName { get; }
         Exception LastException { get; }
         Operations LastStep { get; }
+
+        #endregion Public Properties
+    }
+
+    public interface IExperimentEventArgs
+    {
+        #region Public Properties
+
+        ISciencePublisher Publisher { get; }
+        IExperimentState State { get; }
 
         #endregion Public Properties
     }
@@ -98,28 +117,28 @@ namespace WeirdScience
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnError(Action<IExperimentError> handler);
+        //IExperimentOptionsBuilder<T, TPublish> OnError(Action<IExperimentError> handler);
 
         /// <summary>
         /// Sets an action to perform if an error occurs and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnError(Func<IExperimentError, string> handler);
+        IExperimentOptionsBuilder<T, TPublish> OnError(EventHandler<IErrorEventArgs> handler);
 
         /// <summary>
         /// Sets an action to perform when a mismatch occurs.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnMismatch(Action<T, T, Exception, Exception> handler);
+        IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<IMismatchEventArgs<T>> handler);
 
         /// <summary>
         /// Sets an action to perform when a mismatch occurs and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler);
+        //IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler);
 
         /// <summary>
         /// Sets a method to determine whether or not to run the Candidates. Use this to reduce the
@@ -147,6 +166,7 @@ namespace WeirdScience
         /// </summary>
         /// <returns></returns>
         T Run();
+
         /// <summary>
         /// Not currently implemented.
         /// </summary>
@@ -163,12 +183,11 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> SetContext(Func<object> context);
 
         /// <summary>
-        /// Not currently implemented.
-        /// Sets a method to determine the timeout in milliseconds. The Experiment will run this
-        /// amount of time for each Candidate before moving on. Setting this method will force the
-        /// Experiment to run each Candidate in a separate Thread. The Experiment will NOT
-        /// terminate/abort the Thread after the set period and the Thread will be left to run on in
-        /// Parallel with the remainder of the Program, so use this option carefully.
+        /// Not currently implemented. Sets a method to determine the timeout in milliseconds. The
+        /// Experiment will run this amount of time for each Candidate before moving on. Setting
+        /// this method will force the Experiment to run each Candidate in a separate Thread. The
+        /// Experiment will NOT terminate/abort the Thread after the set period and the Thread will
+        /// be left to run on in Parallel with the remainder of the Program, so use this option carefully.
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
@@ -179,28 +198,28 @@ namespace WeirdScience
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Setup(Action handler);
+        IExperimentOptionsBuilder<T, TPublish> Setup(EventHandler<IExperimentEventArgs> handler);
 
         /// <summary>
         /// Sets an action to perform before each Candidate is run and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler);
+        //IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler);
 
         /// <summary>
         /// Sets an action to perform after each Candidate is run.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Teardown(Action handler);
+        IExperimentOptionsBuilder<T, TPublish> Teardown(EventHandler<IExperimentEventArgs> handler);
 
         /// <summary>
         /// Sets an action to perform after each Candidate is run and return a message.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler);
+        //IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler);
 
         #endregion Public Methods
     }
@@ -211,26 +230,26 @@ namespace WeirdScience
 
         IDictionary<string, IObservation<T>> Candidates { get; }
         IObservation<T> Control { get; set; }
-        IExperimentState<T> LastState { get; }
+        IExperimentState LastState { get; }
         string Name { get; }
 
         #endregion Public Properties
     }
 
-    public interface IExperimentState<T>
+    public interface IExperimentState
     {
         #region Public Properties
 
-        string Name { get; set; }
+        object Context { get; set; }
         Operations CurrentStep { get; set; }
-
+        string Name { get; set; }
         DateTime Timestamp { get; }
 
         #endregion Public Properties
 
         #region Public Methods
 
-        IExperimentState<T> Snapshot();
+        IExperimentState Snapshot();
 
         #endregion Public Methods
     }
@@ -239,21 +258,47 @@ namespace WeirdScience
     {
         #region Public Properties
 
+        event EventHandler<IErrorEventArgs> OnErrorEvent;
+        void OnError(IErrorEventArgs args);
+
+        event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
+
+        event EventHandler<IExperimentEventArgs> SetupEvent;
+
+        event EventHandler<IExperimentEventArgs> TeardownEvent;
+        void OnMismatch(IMismatchEventArgs<T> args);
+
+        void Setup(IExperimentEventArgs args);
+
+        void Teardown(IExperimentEventArgs args);
         Func<T, T, bool> AreEqual { get; set; }
-        IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates();
-        void AddCandidate(string name, Func<T> candidate);
         Func<T> Control { get; set; }
+
         Func<T, T, bool> Ignore { get; set; }
-        Func<IExperimentError, string> OnError { get; set; }
-        Func<T, T, Exception, Exception, string> OnMismatch { get; set; }
+
+        //Func<IExperimentError, string> OnError { get; set; }
+
+        //Func<T, T, Exception, Exception, string> OnMismatch { get; set; }
+
         Func<bool> PreCondition { get; set; }
+
         Func<T, TPublish> Prepare { get; set; }
+
         Action<IExperimentResult<TPublish>> Publish { get; set; }
+
         Func<bool> RunInParallel { get; set; }
+
         Func<object> SetContext { get; set; }
+
         Func<long> SetTimeout { get; set; }
-        Func<string> Setup { get; set; }
-        Func<string> Teardown { get; set; }
+
+        //Func<string> Setup { get; set; }
+
+        //Func<string> Teardown { get; set; }
+
+        void AddCandidate(string name, Func<T> candidate);
+
+        IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates();
 
         #endregion Public Properties
     }
@@ -282,14 +327,26 @@ namespace WeirdScience
         #endregion Public Methods
     }
 
+    public interface IMismatchEventArgs<T> : IExperimentEventArgs
+    {
+        #region Public Properties
+
+        T Candidate { get; }
+        Exception CandidateException { get; }
+        T Control { get; }
+        Exception ControlException { get; }
+
+        #endregion Public Properties
+    }
+
     public interface IObservation<T>
     {
         #region Public Properties
 
         object Context { get; }
         long ElapsedMilliseconds { get; }
-        IExperimentError ExperimentError { get; }
         bool ExceptionThrown { get; }
+        IExperimentError ExperimentError { get; }
         bool IsMismatched { get; }
         string Name { get; }
         bool TimedOut { get; }
@@ -315,13 +372,13 @@ namespace WeirdScience
 
         bool AreEqual(T control, T candidate);
 
-        object SetContext();
-
         bool Ignore(T control, T candidate);
 
-        string OnError(IExperimentError expError);
+        //string OnError(IExperimentError expError);
+        void OnError(IErrorEventArgs args);
 
-        string OnMismatch(T control, T candidate, Exception controlException, Exception candidateException);
+        //string OnMismatch(T control, T candidate, Exception controlException, Exception candidateException);
+        void OnMismatch(IMismatchEventArgs<T> args);
 
         bool PreCondition();
 
@@ -329,17 +386,21 @@ namespace WeirdScience
 
         void Publish(IExperimentResult<TPublish> results);
 
-        void Publish(string message, IExperimentState<TPublish> state);
+        void Publish(string message, IExperimentState state);
 
         T Run();
 
         bool RunInParallel();
 
-        string Setup();
-
-        string Teardown();
+        object SetContext();
 
         long SetTimeout();
+
+        //string Setup();
+        void Setup(IExperimentEventArgs args);
+
+        //string Teardown();
+        void Teardown(IExperimentEventArgs args);
 
         #endregion Public Methods
     }
@@ -350,7 +411,7 @@ namespace WeirdScience
 
         void Publish<T>(IExperimentResult<T> results);
 
-        void Publish<T>(string message, IExperimentState<T> state);
+        void Publish(string message, IExperimentState state);
 
         #endregion Public Methods
     }

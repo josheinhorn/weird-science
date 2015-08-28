@@ -264,7 +264,7 @@ In this case, one work-around is to clone the mutable objects prior to execution
 ## Future work
 There are definite plans to add two additional steps, `SetTimeout` and `OnTimeout`. These steps will allow users to define the maximum amount of time the Experiment should wait for Candidate results before moving on and then take an action if there is a time out.
 
-Setting a time out duration is meant to be used in situations where the performance of a Candidate is unknown or when the execution of the program simple cannot afford to wait. Of course, the Candidate code must be run in a separate thread (not necessarily concurrent) in order to continue processing before it finishes.
+Setting a time out duration is meant to be used in situations where the performance of a Candidate is unknown or when the execution of the program simply cannot afford to wait. Of course, the Candidate code must be run in a separate thread (not necessarily concurrently) to allowed the program to continue before it finishes.
 
 One possible use of the `OnTimeout` step could be to set a state (e.g. static variable) that would be used in the `PreCondition` step to activate/deactive certain Experiments when performance is suffering. If the user wants even more control, they could set a Task Cancellation Token to abort the Candidate thread from within.
 

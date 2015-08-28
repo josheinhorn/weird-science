@@ -19,7 +19,7 @@ namespace WeirdScience
 
         public IDictionary<string, IObservation<T>> Candidates { get; internal set; }
         public IObservation<T> Control { get; set; }
-        public IExperimentState<T> LastState { get; internal set; }
+        public IExperimentState LastState { get; internal set; }
         public string Name { get; internal set; }
 
         #endregion Public Properties

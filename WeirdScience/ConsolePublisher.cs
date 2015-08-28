@@ -13,7 +13,7 @@ namespace WeirdScience
 
         #region Public Methods
 
-        public virtual void Publish<T>(string message, IExperimentState<T> state)
+        public virtual void Publish(string message, IExperimentState state)
         {
             if (!string.IsNullOrEmpty(message))
                 messages.AppendFormat("  {3} - Message from Experiment '{0}' in Step '{1}': {2}\n",

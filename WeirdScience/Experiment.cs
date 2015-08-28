@@ -14,7 +14,7 @@ namespace WeirdScience
 
         private const string ControlName = "WeirdScience.Control";
 
-        private IExperimentState<TPublish> _currentState;
+        private IExperimentState _currentState;
 
         private string _name;
 
@@ -31,7 +31,7 @@ namespace WeirdScience
 
         #region Public Constructors
 
-        public Experiment(string name, ISciencePublisher publisher, IExperimentState<TPublish> state,
+        public Experiment(string name, ISciencePublisher publisher, IExperimentState state,
             IExperimentSteps<T, TPublish> steps, bool throwOnInternalExceptions)
         {
             _name = name;
@@ -41,7 +41,7 @@ namespace WeirdScience
             _steps = steps; //should be overwriten by public Set
         }
 
-        public Experiment(string name, ISciencePublisher publisher, IExperimentState<TPublish> state,
+        public Experiment(string name, ISciencePublisher publisher, IExperimentState state,
             bool throwOnInternalExceptions)
             : this(name, publisher, state, new ExperimentSteps<T, TPublish>(), throwOnInternalExceptions)
         { }
@@ -66,7 +66,7 @@ namespace WeirdScience
 
         #region Protected Properties
 
-        protected virtual IExperimentState<TPublish> CurrentState { get { return _currentState; } }
+        protected virtual IExperimentState CurrentState { get { return _currentState; } }
         protected virtual ISciencePublisher Publisher { get { return _publisher; } }
         protected virtual bool ThrowOnInternalExceptions { get { return _throwOnInternalExceptions; } }
 
@@ -91,17 +91,14 @@ namespace WeirdScience
             return Steps.Ignore == null ? false : Steps.Ignore(control, candidate);
         }
 
-        public virtual string OnError(IExperimentError error)
+        public virtual void OnError(IErrorEventArgs args)
         {
-            return Steps.OnError != null ? Steps.OnError(error) : string.Empty;
+            Steps.OnError(args);
         }
 
-        public virtual string OnMismatch(T control, T candidate,
-            Exception controlException, Exception candidateException)
+        public virtual void OnMismatch(IMismatchEventArgs<T> args)
         {
-            return Steps.OnMismatch != null ?
-                Steps.OnMismatch(control, candidate, controlException, candidateException)
-                : string.Empty;
+            Steps.OnMismatch(args);
         }
 
         public virtual bool PreCondition()
@@ -133,7 +130,7 @@ namespace WeirdScience
                 Publisher.Publish(results);
         }
 
-        public virtual void Publish(string message, IExperimentState<TPublish> state)
+        public virtual void Publish(string message, IExperimentState state)
         {
             if (Publisher != null)
                 Publisher.Publish(message, state);
@@ -186,14 +183,14 @@ namespace WeirdScience
             return Steps.RunInParallel == null ? false : Steps.RunInParallel();
         }
 
-        public virtual string Setup()
+        public virtual void Setup(IExperimentEventArgs args)
         {
-            return Steps.Setup != null ? Steps.Setup() : string.Empty;
+            Steps.Setup(args);
         }
 
-        public virtual string Teardown()
+        public virtual void Teardown(IExperimentEventArgs args)
         {
-            return Steps.Teardown != null ? Steps.Teardown() : string.Empty;
+            Steps.Teardown(args);
         }
 
         public virtual long SetTimeout()
@@ -223,7 +220,8 @@ namespace WeirdScience
                         if (TryPreCondition() && candidate.Value != null)
                         {
                             var context = TrySetContext();
-                            TrySetupAndPublish();
+                            CurrentState.Context = context;
+                            TrySetup();
                             timer.Restart();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
@@ -234,7 +232,7 @@ namespace WeirdScience
                                 TryOnMismatchAndPublish(controlResult, candResult, controlException, null);
                             }
                             candValue = TryPrepare(candResult);
-                            TryTeardownAndPublish();
+                            TryTeardown();
                             if (!results.Candidates.ContainsKey(candidate.Key))
                             {
                                 results.Candidates.Add(candidate.Key,
@@ -258,7 +256,7 @@ namespace WeirdScience
                     {
                         timer.Stop();
                         //it's possible for this to throw, which would result in an internal exception
-                        TryOnErrorAndPublish(sfe.ExperimentError);
+                        TryOnError(sfe.ExperimentError);
                         if (!exceptionComparer.Equals(sfe.ExperimentError.LastException, controlException))
                         {
                             //It's a mismatch if the exceptions don't match
@@ -301,20 +299,21 @@ namespace WeirdScience
             try
             {
                 context = TrySetContext();
+                CurrentState.Context = context;
             }
             catch (StepFailedException sfe)
             {
                 stepError = sfe.ExperimentError;
-                TryOnErrorAndPublish(stepError);
+                TryOnError(stepError);
             }
             try
             {
-                TrySetupAndPublish();
+                TrySetup();
             }
             catch (StepFailedException sfe)
             {
                 stepError = sfe.ExperimentError;
-                TryOnErrorAndPublish(stepError);
+                TryOnError(stepError);
             }
             var timer = new Stopwatch();
             CurrentState.CurrentStep = Operations.Control;
@@ -336,7 +335,7 @@ namespace WeirdScience
                         + e.Message,
                     ExperimentName = ControlName
                 };
-                TryOnErrorAndPublish(error);//TODO: Should we run OnError on Control??
+                TryOnError(error);//TODO: Should we run OnError on Control??
                 results.Control = new Observation<TPublish>
                 {
                     ExperimentError = error,
@@ -355,17 +354,17 @@ namespace WeirdScience
             catch (StepFailedException sfe)
             {
                 stepError = sfe.ExperimentError;
-                TryOnErrorAndPublish(stepError);
+                TryOnError(stepError);
                 //We must continue on because we've already gotten a result
             }
             try
             {
-                TryTeardownAndPublish();
+                TryTeardown();
             }
             catch (StepFailedException sfe)
             {
                 stepError = sfe.ExperimentError;
-                TryOnErrorAndPublish(stepError);
+                TryOnError(stepError);
             }
             results.Control = new Observation<TPublish>
             {
@@ -425,20 +424,28 @@ namespace WeirdScience
             return TryOp(() => Ignore(control, candidate));
         }
 
-        private void TryOnErrorAndPublish(IExperimentError error)
+        private void TryOnError(IExperimentError error)
         {
             if (error == null) throw new ArgumentNullException("error");
             CurrentState.CurrentStep = Operations.OnError;
-            var msg = TryOp(() => OnError(error));
-            TryPublish(msg, CurrentState.Snapshot());
+            TryOp(() =>
+            {
+                OnError(new ErrorEventArgs { Publisher = Publisher, State = CurrentState.Snapshot(), Error = error });
+                return 0;
+            });
         }
 
         private void TryOnMismatchAndPublish(T control, T candidate,
             Exception controlException, Exception candidateException)
         {
             CurrentState.CurrentStep = Operations.OnMismatch;
-            var msg = TryOp(() => OnMismatch(control, candidate, controlException, candidateException));
-            TryPublish(msg, CurrentState.Snapshot());
+            TryOp(() =>
+            {
+                OnMismatch(new MismatchEventArgs<T> { Publisher = Publisher, State = CurrentState.Snapshot(),
+                    Control = control, Candidate = candidate, ControlException = controlException,
+                    CandidateException  = candidateException});
+                return 0;
+            });
         }
 
         private bool TryPreCondition()
@@ -459,7 +466,7 @@ namespace WeirdScience
             TryOp(() => { Publish(results); return 0; });
         }
 
-        private void TryPublish(string message, IExperimentState<TPublish> state)
+        private void TryPublish(string message, IExperimentState state)
         {
             CurrentState.CurrentStep = Operations.Publish;
             TryOp(() => { Publish(message, state); return 0; });
@@ -471,18 +478,24 @@ namespace WeirdScience
             return TryOp(RunInParallel);
         }
 
-        private void TrySetupAndPublish()
+        private void TrySetup()
         {
             CurrentState.CurrentStep = Operations.Setup;
-            var msg = TryOp(Setup);
-            TryPublish(msg, CurrentState.Snapshot());
+            TryOp(() =>
+            {
+                Setup(new ExperimentEventArgs { Publisher = Publisher, State = CurrentState.Snapshot() });
+                return 0;
+            });
         }
 
-        private void TryTeardownAndPublish()
+        private void TryTeardown()
         {
             CurrentState.CurrentStep = Operations.Teardown;
-            var msg = TryOp(Teardown);
-            TryPublish(msg, CurrentState.Snapshot());
+            TryOp(() =>
+            {
+                Teardown(new ExperimentEventArgs { Publisher = Publisher, State = CurrentState.Snapshot() });
+                return 0;
+            });
         }
 
         private long TrySetTimeout()

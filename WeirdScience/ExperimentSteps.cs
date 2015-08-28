@@ -36,16 +36,6 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<IExperimentError, string> OnError
-        {
-            get; set;
-        }
-
-        public Func<T, T, Exception, Exception, string> OnMismatch
-        {
-            get; set;
-        }
-
         public Func<bool> PreCondition
         {
             get; set;
@@ -76,15 +66,10 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<string> Setup
-        {
-            get; set;
-        }
-
-        public Func<string> Teardown
-        {
-            get; set;
-        }
+        public event EventHandler<IErrorEventArgs> OnErrorEvent;
+        public event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
+        public event EventHandler<IExperimentEventArgs> SetupEvent;
+        public event EventHandler<IExperimentEventArgs> TeardownEvent;
 
         public void AddCandidate(string name, Func<T> candidate)
         {
@@ -103,6 +88,34 @@ namespace WeirdScience
         public IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates()
         {
             return Candidates;
+        }
+
+        public void OnError(IErrorEventArgs args)
+        {
+            var handler = OnErrorEvent;
+            if (handler != null)
+                handler(this, args);
+        }
+
+        public void OnMismatch(IMismatchEventArgs<T> args)
+        {
+            var handler = OnMismatchEvent;
+            if (handler != null)
+                handler(this, args);
+        }
+
+        public void Setup(IExperimentEventArgs args)
+        {
+            var handler = SetupEvent;
+            if (handler != null)
+                handler(this, args);
+        }
+
+        public void Teardown(IExperimentEventArgs args)
+        {
+            var handler = TeardownEvent;
+            if (handler != null)
+                handler(this, args);
         }
 
         #endregion Public Properties
