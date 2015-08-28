@@ -223,8 +223,7 @@ namespace WeirdScience
                         if (TryPreCondition() && candidate.Value != null)
                         {
                             var context = TrySetContext();
-                            var msg = TrySetup();
-                            TryPublish(msg, CurrentState.Snapshot());
+                            TrySetupAndPublish();
                             timer.Restart();
                             candResult = TryCandidate(candidate.Value);
                             timer.Stop();
@@ -235,8 +234,7 @@ namespace WeirdScience
                                 TryOnMismatchAndPublish(controlResult, candResult, controlException, null);
                             }
                             candValue = TryPrepare(candResult);
-                            msg = TryTeardown();
-                            TryPublish(msg, CurrentState.Snapshot());
+                            TryTeardownAndPublish();
                             if (!results.Candidates.ContainsKey(candidate.Key))
                             {
                                 results.Candidates.Add(candidate.Key,
@@ -296,6 +294,7 @@ namespace WeirdScience
                 throw new InvalidOperationException(
                     "The Control was never set for this Experiment! Can't run an Experiment without a Control!");
             }
+            IExperimentError stepError = null;
             object context = null;
             T result = default(T);
             TPublish value = default(TPublish);
@@ -305,8 +304,17 @@ namespace WeirdScience
             }
             catch (StepFailedException sfe)
             {
-                TryOnErrorAndPublish(sfe.ExperimentError);
-                //We'll still run the Control even without a context
+                stepError = sfe.ExperimentError;
+                TryOnErrorAndPublish(stepError);
+            }
+            try
+            {
+                TrySetupAndPublish();
+            }
+            catch (StepFailedException sfe)
+            {
+                stepError = sfe.ExperimentError;
+                TryOnErrorAndPublish(stepError);
             }
             var timer = new Stopwatch();
             CurrentState.CurrentStep = Operations.Control;
@@ -340,18 +348,24 @@ namespace WeirdScience
                 };
                 return result;
             }
-            bool excpThrown = false;
-            IExperimentError prepareError = null;
             try
             {
                 value = TryPrepare(result);
             }
             catch (StepFailedException sfe)
             {
-                excpThrown = true;
-                prepareError = sfe.ExperimentError;
-                TryOnErrorAndPublish(prepareError);
+                stepError = sfe.ExperimentError;
+                TryOnErrorAndPublish(stepError);
                 //We must continue on because we've already gotten a result
+            }
+            try
+            {
+                TryTeardownAndPublish();
+            }
+            catch (StepFailedException sfe)
+            {
+                stepError = sfe.ExperimentError;
+                TryOnErrorAndPublish(stepError);
             }
             results.Control = new Observation<TPublish>
             {
@@ -359,8 +373,8 @@ namespace WeirdScience
                 Context = context,
                 Name = ControlName,
                 IsMismatched = false, //Control can't be mismatched
-                ExceptionThrown = excpThrown,
-                ExperimentError = prepareError,
+                ExceptionThrown = stepError != null,
+                ExperimentError = stepError,
                 Value = value
             };
             return result;
@@ -457,16 +471,18 @@ namespace WeirdScience
             return TryOp(RunInParallel);
         }
 
-        private string TrySetup()
+        private void TrySetupAndPublish()
         {
             CurrentState.CurrentStep = Operations.Setup;
-            return TryOp(Setup);
+            var msg = TryOp(Setup);
+            TryPublish(msg, CurrentState.Snapshot());
         }
 
-        private string TryTeardown()
+        private void TryTeardownAndPublish()
         {
             CurrentState.CurrentStep = Operations.Teardown;
-            return TryOp(Teardown);
+            var msg = TryOp(Teardown);
+            TryPublish(msg, CurrentState.Snapshot());
         }
 
         private long TrySetTimeout()

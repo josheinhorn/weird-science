@@ -29,7 +29,7 @@ Good question! Basically, you use it to set up "Experiments" that can run in sen
 
 One intended use case is when Unit Tests, Integration Tests, and QA tests are impractical. This is when it is simply too difficult to predict or recreate the conditions that exist in a Production environment, such as high load or unknown/inconsistent data states.
 
-Another use case is when the stakes are simple too high to rely on test environments to properly evaluate impacts of major changes before rolling out to Production. How many times has your boss or coworker told you not to refactor a set of classes because the risk of breaking Production is too high?
+Another use case is when the stakes are simply too high to rely on test environments to properly evaluate impacts of major changes before rolling out to Production. How many times has your boss or coworker told you not to refactor a set of classes because the risk of breaking Production is too high?
 
 ## How it works
 Though you can't really tell from the simple example, an `IExperiment` object is getting configured by the fluent interface, and then executed by the `Run()` method.
@@ -42,8 +42,10 @@ At a high level, general flow of execution (while handling Exceptions and tracki
 
 **Control**
   1. SetContext
+  - Setup
   - Control
   - Prepare
+  - Teardown
   - OnError
 
 **Candidates**
@@ -67,8 +69,6 @@ This is where the real magic happens. Users are required to write their own impl
 
 #### `void Publish<T>(IExperimentResult<T> results)`
 This method is called at the end of an Experiment run and is expected to perform some type of external I/O in order to persist some part of the results. `IExperimentResult<T>` contains a lot of info, including Elapsed Time, Exceptions thrown, the actual result (as set by the `Prepare` step) and a few other pieces of data.
-
-
 
 #### `void Publish<T>(string message, IExperimentState<T> state)`
 This method is called at various stages of the Experiment execution and is passed messages from the various delegate methods including:
@@ -126,6 +126,7 @@ If you desire a bit more control over your workspace, you can instantiate your o
  lab
     .Control(() => DoSomething(foo))
     .Candidate(() => DoSomething(bar))
+    .Prepare((val) => val.ToCharArray().FirstOrDefault())
     ...
 ```
 
@@ -183,7 +184,7 @@ This Step does _not_ run for the Control.
 _Delegate Type:_ `Func<bool>`
 
 ### SetContext
-This is a function that returns a single object. This object is later passed to the Publisher to give the publish process greater insight into the process.
+This is a function that returns a single object. This object is later passed to the Publisher within each Observation to help give the publish process greater insight into the process.
 
 This Step _does_ run for the Control.
 
@@ -192,7 +193,7 @@ _Delegate Type:_ `Func<object>`
 ### Setup
 This is a function that runs before the Candidate is actually run, and optionally can return a `string`. The `string` result is passed to the Publisher. This Step can be used to prepare objects for use by the Candidates (such as cloning the original input object) as well as write messages to be used in the Publish process.
 
-This Step does _not_ run for the Control.
+This Step _does_ run for the Control.
 
 _Delegate Type:_ `Func<string>` _or_ `Action`
 
@@ -236,7 +237,7 @@ _Delegate Type:_ `Func<T, TPublish>`
 ### Teardown
 This is a function that runs after the Candidate is run, and optionally can return a `string`. The `string` result is passed to the Publisher. This Step can be used to clean up objects (such as restoring things to a previous state) as well as write messages to be used in the Publish process.
 
-This Step does _not_ run for the Control.
+This Step _does_ run for the Control.
 
 _Delegate Type:_ `Func<string>` or `Action`
 
@@ -248,6 +249,17 @@ This function runs when an Exception is thrown by one of the other steps. It wil
 This Step _does_ run for the Control.
 
 _Delegate Type:_ `Func<IExperimentError, string>` _or_ `Action<IExperimentError>`
+
+## Known limitations
+Obviously there is a limit to how much you can really test in a Production environment. There are a couple of use cases that don't fit Weird Science very well, though there are ways around them.
+
+The most common limitation is when the Control/Candidates perform some type of Write operation on an external source. In this case, a poorly planned Experiment could easily leave the external source in an inconsistent or incorrect state.
+
+One way around this is to perform some kind of cleanup in one of the Steps, such as OnMismatch or Teardown. Another way is to use mock implementations of the external sources for the Candidates. You could even go so far as to use a mocking framework (like my favorite, [Moq](https://github.com/Moq/moq4)) to create mock objects and verify results just like in unit tests. Of course, performance should be considered when using such techniques, since mocking at run-time will most definitely have a negative impact (though this could be greatly offset by using singletons).
+
+Another limitation is when the Control/Candidates perform mutations on their input parameters instead of just returning a result. In this case, a poorly planned Experiment could easily end up with the in-memory objects in completely inconsistent states, disrupting both the Experiment results and the execution of the actual program.
+
+In this case, one work-around is to clone the mutable objects prior to execution, and pass a clone to each of the Candidates. Of course once again, performance must be considered since deep-cloning can be an expensive operation. Another work-around is to simply reset the altered parts of the parameter objects during the Setup/Teardown steps. Note that the Setup/Teardown steps _do_ run for the Control to provide the flexibility for this.
 
 ## Future work
 There are definite plans to add two additional steps, `SetTimeout` and `OnTimeout`. These steps will allow users to define the maximum amount of time the Experiment should wait for Candidate results before moving on and then take an action if there is a time out.

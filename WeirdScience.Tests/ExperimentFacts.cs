@@ -171,6 +171,7 @@ namespace WeirdScience.Tests
                 Assert.True(excpPassed);
                 Assert.Equal(result, excp);
             }
+
             [Theory, AutoMoqData]
             public void Control_Not_Set(Mock<ISciencePublisher> publisher,
                 Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state,
@@ -191,9 +192,10 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 // Nothing published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
-                publisher.Verify(x => x.Publish(It.IsAny<string>(), It.IsAny<IExperimentState<string>>()), 
+                publisher.Verify(x => x.Publish(It.IsAny<string>(), It.IsAny<IExperimentState<string>>()),
                     Times.Never);
             }
+
             [Theory, AutoMoqData]
             public void Ignore(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
                 Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
@@ -236,9 +238,10 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnError_And_Control_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
-               string candName, InvalidProgramException onErrorExcp, ApplicationException ctrlExcp)
+            public void OnError_And_Control_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult, string candName, InvalidProgramException onErrorExcp,
+                ApplicationException ctrlExcp)
             {
                 //Setup
                 Func<IExperimentError, string> onError = (error) =>
@@ -271,9 +274,10 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnError_And_Control_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
-               string candName, InvalidProgramException onErrorExcp, ApplicationException ctrlExcp)
+            public void OnError_And_Control_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult, string candName, InvalidProgramException onErrorExcp,
+                ApplicationException ctrlExcp)
             {
                 //Setup
                 Func<IExperimentError, string> onError = (error) =>
@@ -290,8 +294,8 @@ namespace WeirdScience.Tests
                 SetupStateSnapshot(state);
                 //Exercise
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
-                // Exception thrown because throwOnInternalExceptions = true, but its a StepFailedException,
-                // not an ApplicationException as would be expected
+                // Exception thrown because throwOnInternalExceptions = true, but its a
+                // StepFailedException, not an ApplicationException as would be expected
                 var result = Assert.Throws<StepFailedException>(() => sut.Run());
                 //Verify
                 steps.Verify(x => x.OnError, Times.AtLeastOnce);
@@ -305,9 +309,10 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnError_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
-               string candName, InvalidProgramException excp, ApplicationException otherExcp)
+            public void OnError_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult, string candName, InvalidProgramException excp,
+                ApplicationException otherExcp)
             {
                 //Setup
                 Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
@@ -341,8 +346,9 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnError_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+            public void OnError_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult,
                string candName, InvalidProgramException excp, ApplicationException otherExcp)
             {
                 //Setup
@@ -377,9 +383,9 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnMismatch_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
-               string candName, InvalidProgramException excp, string errMsg)
+            public void OnMismatch_ThrowInternalExceptions_False(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
                 Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
@@ -416,9 +422,9 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void OnMismatch_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-               Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
-               string candName, InvalidProgramException excp, string errMsg)
+            public void OnMismatch_ThrowInternalExceptions_True(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState<string>> state, string name,
+                string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
                 Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
@@ -569,7 +575,9 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.OnError, Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
-                    r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    && r.Control.ExperimentError.LastException == excp
+                    && r.Control.ExperimentError.LastStep == Operations.SetContext
                     && r.Candidates.All(kvp => kvp.Value.ExceptionThrown
                     && kvp.Value.ExperimentError.LastException == excp
                     && kvp.Value.ExperimentError.LastStep == Operations.SetContext))), Times.Once);
@@ -610,7 +618,9 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.OnError, Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
-                    r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    && r.Control.ExperimentError.LastException == excp
+                    && r.Control.ExperimentError.LastStep == Operations.Setup
                     && r.Candidates.All(kvp => kvp.Value.ExceptionThrown
                     && kvp.Value.ExperimentError.LastException == excp
                     && kvp.Value.ExperimentError.LastStep == Operations.Setup))), Times.Once);
@@ -651,7 +661,9 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.OnError, Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
-                    r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                    && r.Control.ExperimentError.LastException == excp
+                    && r.Control.ExperimentError.LastStep == Operations.Teardown
                     && r.Candidates.All(kvp => kvp.Value.ExceptionThrown
                     && kvp.Value.ExperimentError.LastException == excp
                     && kvp.Value.ExperimentError.LastStep == Operations.Teardown))), Times.Once);
@@ -665,8 +677,8 @@ namespace WeirdScience.Tests
         }
 
         /// <summary>
-        /// Tests for when Steps run as expected. Exceptions can still be thrown from Control/Candidates, but should
-        /// be handled gracefully if all other Steps do not throw Exceptions.
+        /// Tests for when Steps run as expected. Exceptions can still be thrown from
+        /// Control/Candidates, but should be handled gracefully if all other Steps do not throw Exceptions.
         /// </summary>
         public class TheStepsWithoutErrors : TheSteps
         {
@@ -929,7 +941,8 @@ namespace WeirdScience.Tests
 
             [Theory, AutoMoqData]
             public void PreCondition(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
-                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult, string candName)
+                Mock<IExperimentState<string>> state, string name, string ctrlResult, string candResult,
+                string candName)
             {
                 //Setup
                 bool conditionRan = false;
@@ -1053,7 +1066,7 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run();
                 //Verify
-                steps.Verify(x => x.Setup, Times.AtLeastOnce); //Teardown called
+                steps.Verify(x => x.Teardown, Times.AtLeastOnce); //Teardown called
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
                     It.Is<IExperimentState<string>>(y => y.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);
