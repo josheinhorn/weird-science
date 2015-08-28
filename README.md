@@ -1,4 +1,4 @@
-# Weird Science
+# Weird Science :microscope:
 Weird Science is a lightweight .NET library that helps to perform experiments in sensitive environments when Unit Tests just won't do. This was directly inspired by Github's Ruby [Scientist](https://github.com/github/scientist) library. As they say, this is meant to aid in "carefully refactoring critical paths."
 
 ## A simple example
@@ -145,8 +145,8 @@ public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
   {
       // Can still use delegates in addition to custom implementation
       // by calling the Base method
-      var baseMsg = base.OnMismatch(control, candidate, controlException,
-        candidateException, controlException);
+      var baseMsg = base.OnMismatch(control, candidate,
+        controlException, candidateException);
       return string.Format("There was a mismatch: {0}, {1}, {2}, {3}",
         candidate, control, candidateException, controlException);
   }
@@ -252,8 +252,8 @@ _Delegate Type:_ `Func<IExperimentError, string>` _or_ `Action<IExperimentError>
 ## Future work
 There are definite plans to add two additional steps, `SetTimeout` and `OnTimeout`. These steps will allow users to define the maximum amount of time the Experiment should wait for Candidate results before moving on and then take an action if there is a time out.
 
-Having a time out value is meant to be used in situations where the performance of a Candidate is unknown or when the execution of the program simple cannot afford to wait.
+Setting a time out duration is meant to be used in situations where the performance of a Candidate is unknown or when the execution of the program simple cannot afford to wait. Of course, the Candidate code must be run in a separate thread (not necessarily concurrent) in order to continue processing before it finishes.
 
-One possible use of the `OnTimeout` step could be to set a state (e.g. static variable) that would be used in the `PreCondition` step to activate/deactive certain Experiments when performance is suffering.
+One possible use of the `OnTimeout` step could be to set a state (e.g. static variable) that would be used in the `PreCondition` step to activate/deactive certain Experiments when performance is suffering. If the user wants even more control, they could set a Task Cancellation Token to abort the Candidate thread from within.
 
 There is also a tentative plan to add a `RunInParallel` step which would return a `bool` that determines if the Candidates should run on separate Threads. This could potentially speed up performance but would greatly increase the complexity of running an Experiment since users would have to address concurrency issues with shared resources.
