@@ -98,7 +98,8 @@ namespace WeirdScience
         #region Public Methods
 
         /// <summary>
-        /// Sets a method to determine if two results are equivalent.
+        /// Sets a method to determine if two results are equivalent with the signature:
+        /// bool function(T control, T candidate)
         /// </summary>
         /// <param name="compare"></param>
         /// <returns></returns>
@@ -106,7 +107,8 @@ namespace WeirdScience
 
         /// <summary>
         /// Sets a method to determine if a set of results should be ignored for further comparison.
-        /// The results will still be stored for Publish regardless.
+        /// The results will still be stored for Publish regardless. The method should have the signature:
+        /// bool function(T control, T candidate)
         /// </summary>
         /// <param name="ignoreIf"></param>
         /// <returns></returns>
@@ -120,29 +122,22 @@ namespace WeirdScience
         //IExperimentOptionsBuilder<T, TPublish> OnError(Action<IExperimentError> handler);
 
         /// <summary>
-        /// Sets an action to perform if an error occurs and return a message.
+        /// Sets an action to perform if an error occurs. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnError(EventHandler<IErrorEventArgs> handler);
 
         /// <summary>
-        /// Sets an action to perform when a mismatch occurs.
+        /// Sets an action to perform when a mismatch occurs. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<IMismatchEventArgs<T>> handler);
 
         /// <summary>
-        /// Sets an action to perform when a mismatch occurs and return a message.
-        /// </summary>
-        /// <param name="handler"></param>
-        /// <returns></returns>
-        //IExperimentOptionsBuilder<T, TPublish> OnMismatch(Func<T, T, Exception, Exception, string> handler);
-
-        /// <summary>
-        /// Sets a method to determine whether or not to run the Candidates. Use this to reduce the
-        /// number of times the experiment is done under high load.
+        /// Sets a method to determine whether or not to run the Candidates. Use this to conditionally run 
+        /// Experiments and reduce added load.
         /// </summary>
         /// <param name="runIf"></param>
         /// <returns></returns>
@@ -150,7 +145,7 @@ namespace WeirdScience
 
         /// <summary>
         /// Sets a method to prepare the experiment resulsts for Publish so that unneccessary data
-        /// is not held longer than necessary.
+        /// is not persisted in memory.
         /// </summary>
         /// <remarks>
         /// Common uses would be to extract only the data you care to publish from a result,
@@ -194,32 +189,18 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> SetTimeout(Func<long> timeout);
 
         /// <summary>
-        /// Sets an action to perform before each Candidate is run.
+        /// Sets an action to perform before each Candidate is run. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Setup(EventHandler<IExperimentEventArgs> handler);
 
         /// <summary>
-        /// Sets an action to perform before each Candidate is run and return a message.
-        /// </summary>
-        /// <param name="handler"></param>
-        /// <returns></returns>
-        //IExperimentOptionsBuilder<T, TPublish> Setup(Func<string> handler);
-
-        /// <summary>
-        /// Sets an action to perform after each Candidate is run.
+        /// Sets an action to perform after each Candidate is run. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
         IExperimentOptionsBuilder<T, TPublish> Teardown(EventHandler<IExperimentEventArgs> handler);
-
-        /// <summary>
-        /// Sets an action to perform after each Candidate is run and return a message.
-        /// </summary>
-        /// <param name="handler"></param>
-        /// <returns></returns>
-        //IExperimentOptionsBuilder<T, TPublish> Teardown(Func<string> handler);
 
         #endregion Public Methods
     }
@@ -276,10 +257,6 @@ namespace WeirdScience
 
         Func<T, T, bool> Ignore { get; set; }
 
-        //Func<IExperimentError, string> OnError { get; set; }
-
-        //Func<T, T, Exception, Exception, string> OnMismatch { get; set; }
-
         Func<bool> PreCondition { get; set; }
 
         Func<T, TPublish> Prepare { get; set; }
@@ -291,10 +268,6 @@ namespace WeirdScience
         Func<object> SetContext { get; set; }
 
         Func<long> SetTimeout { get; set; }
-
-        //Func<string> Setup { get; set; }
-
-        //Func<string> Teardown { get; set; }
 
         void AddCandidate(string name, Func<T> candidate);
 
@@ -374,10 +347,8 @@ namespace WeirdScience
 
         bool Ignore(T control, T candidate);
 
-        //string OnError(IExperimentError expError);
         void OnError(IErrorEventArgs args);
 
-        //string OnMismatch(T control, T candidate, Exception controlException, Exception candidateException);
         void OnMismatch(IMismatchEventArgs<T> args);
 
         bool PreCondition();
@@ -396,10 +367,8 @@ namespace WeirdScience
 
         long SetTimeout();
 
-        //string Setup();
         void Setup(IExperimentEventArgs args);
 
-        //string Teardown();
         void Teardown(IExperimentEventArgs args);
 
         #endregion Public Methods

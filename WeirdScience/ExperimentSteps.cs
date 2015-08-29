@@ -16,12 +16,15 @@ namespace WeirdScience
 
         #region Public Properties
 
-        public Func<T, T, bool> AreEqual
-        {
-            get; set;
-        }
+        public event EventHandler<IErrorEventArgs> OnErrorEvent;
 
-        private IDictionary<string, Func<T>> Candidates
+        public event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
+
+        public event EventHandler<IExperimentEventArgs> SetupEvent;
+
+        public event EventHandler<IExperimentEventArgs> TeardownEvent;
+
+        public Func<T, T, bool> AreEqual
         {
             get; set;
         }
@@ -66,10 +69,14 @@ namespace WeirdScience
             get; set;
         }
 
-        public event EventHandler<IErrorEventArgs> OnErrorEvent;
-        public event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
-        public event EventHandler<IExperimentEventArgs> SetupEvent;
-        public event EventHandler<IExperimentEventArgs> TeardownEvent;
+        private IDictionary<string, Func<T>> Candidates
+        {
+            get; set;
+        }
+
+        #endregion Public Properties
+
+        #region Public Methods
 
         public void AddCandidate(string name, Func<T> candidate)
         {
@@ -118,6 +125,6 @@ namespace WeirdScience
                 handler(this, args);
         }
 
-        #endregion Public Properties
+        #endregion Public Methods
     }
 }

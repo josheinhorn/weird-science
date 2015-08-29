@@ -216,12 +216,16 @@ _Delegate Type:_ `Func<T>`
 ### Ignore
 This function determines whether or not to ignore a set of Candidate and Control results from being compared. If this evaluates to `true`, the AreEqual and OnMismatch steps will not run for this Candidate. If it evaluates to `false` (default) the AreEqual method will be invoked (if it is set).
 
+The arguments are passed to the delegate as follows: `(T control, T candidate)`
+
 This Step does _not_ run for the Control.
 
 _Delegate Type:_ `Func<T, T, bool>`
 
 ### AreEqual
 This function determines if two results are equivalent &mdash; `true` if they are and `false` if they are not. The default for this is to use `EqualityComparer<T>.Default`. There is no guarantee that both values are not null.
+
+The arguments are passed to the delegate as follows: `(T control, T candidate)`
 
 This Step does _not_ run for the Control.
 
