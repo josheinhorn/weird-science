@@ -124,7 +124,7 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce);
                 steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
                     a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
-                    && a.Error.LastStep == Operations.AreEqual)), Times.AtLeastOnce);
+                    && a.Error.LastStep == Operations.Candidate)), Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Candidates.All(kvp => kvp.Key.Equals(candName) && kvp.Value.ExceptionThrown
@@ -146,10 +146,10 @@ namespace WeirdScience.Tests
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Control;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Control;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 Func<string> control = () =>
                 {
@@ -158,7 +158,8 @@ namespace WeirdScience.Tests
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 steps.SetupGet(x => x.Control)
                     .Returns(control);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
                 //Exercise
@@ -167,7 +168,9 @@ namespace WeirdScience.Tests
                 //Verify
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Candidates still run
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.Control)), Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == excp
@@ -213,15 +216,16 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Ignore;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Ignore;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.Ignore).Returns(ignore);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -230,7 +234,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //no exception
                 //Verify
                 steps.Verify(x => x.Ignore, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.Ignore)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -250,14 +256,15 @@ namespace WeirdScience.Tests
                 ApplicationException ctrlExcp)
             {
                 //Setup
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (error) =>
                 {
                     throw onErrorExcp;
                 };
                 Func<string> control = () => { throw ctrlExcp; };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 steps.SetupGet(x => x.Control).Returns(control);
                 state.SetupAllProperties();
@@ -268,7 +275,9 @@ namespace WeirdScience.Tests
                 // throws the control's Exception
                 var result = Assert.Throws<ApplicationException>(() => sut.Run());
                 //Verify
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == ctrlExcp
+                    && a.Error.LastStep == Operations.Control)), Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Candidates still run in this case
                 //Final results ARE published, but the Control Observation is not properly filled out
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
@@ -286,14 +295,15 @@ namespace WeirdScience.Tests
                 ApplicationException ctrlExcp)
             {
                 //Setup
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (error) =>
                 {
                     throw onErrorExcp;
                 };
                 Func<string> control = () => { throw ctrlExcp; };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 steps.SetupGet(x => x.Control).Returns(control);
                 state.SetupAllProperties();
@@ -304,7 +314,9 @@ namespace WeirdScience.Tests
                 // StepFailedException, not an ApplicationException as would be expected
                 var result = Assert.Throws<StepFailedException>(() => sut.Run());
                 //Verify
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == ctrlExcp
+                    && a.Error.LastStep == Operations.Control)), Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.Never); //Candidates don't run in this case
                 //Final results NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
@@ -321,19 +333,20 @@ namespace WeirdScience.Tests
                 ApplicationException otherExcp)
             {
                 //Setup
-                Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
+                Action<IMismatchEventArgs<string>> onMismatch = (args) =>
                 {
                     throw otherExcp;
                 };
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (error) =>
                 {
                     throw excp;
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns((x, y) => false); //Make sure to cause a mismatch
-                steps.SetupGet(x => x.OnMismatch).Returns(onMismatch);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>())).Callback(onMismatch);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -341,8 +354,10 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, false);
                 var result = sut.Run(); //Exception swallowed because throwOnInternalExceptions = false!
                 //Verify
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>()), Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == otherExcp
+                    && a.Error.LastStep == Operations.OnMismatch)), Times.AtLeastOnce);
                 //Final results NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message NOT published
@@ -358,19 +373,20 @@ namespace WeirdScience.Tests
                string candName, InvalidProgramException excp, ApplicationException otherExcp)
             {
                 //Setup
-                Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
+                Action<IMismatchEventArgs<string>> onMismatch = (args) =>
                 {
                     throw otherExcp;
                 };
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (error) =>
                 {
                     throw excp;
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns((x, y) => false); //Make sure to cause a mismatch
-                steps.SetupGet(x => x.OnMismatch).Returns(onMismatch);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>())).Callback(onMismatch);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -379,7 +395,9 @@ namespace WeirdScience.Tests
                 //Exception thrown because throwOnInternalExceptions = true!
                 var result = Assert.Throws<StepFailedException>(() => sut.Run());
                 //Verify
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == otherExcp
+                    && a.Error.LastStep == Operations.OnMismatch)), Times.AtLeastOnce);
                 //Final results NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message NOT published
@@ -394,21 +412,22 @@ namespace WeirdScience.Tests
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
+                Action<IMismatchEventArgs<string>> onMismatch = (args) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.OnMismatch;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.OnMismatch;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns((x, y) => false); //Make sure to cause a mismatch
-                steps.SetupGet(x => x.OnMismatch).Returns(onMismatch);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>())).Callback(onMismatch);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -416,8 +435,10 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, false);
                 var result = sut.Run(); //Exception swallowed because throwOnInternalExceptions = false!
                 //Verify
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>()), Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.OnMismatch)), Times.AtLeastOnce);
                 //Final results NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message published
@@ -433,21 +454,22 @@ namespace WeirdScience.Tests
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
+                Action<IMismatchEventArgs<string>> onMismatch = (args) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.OnMismatch;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.OnMismatch;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns((x, y) => false); //Make sure to cause a mismatch
-                steps.SetupGet(x => x.OnMismatch).Returns(onMismatch);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>())).Callback(onMismatch);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -456,8 +478,10 @@ namespace WeirdScience.Tests
                 //Exception thrown because throwOnInternalExceptions = true!
                 var result = Assert.Throws<StepFailedException>(() => sut.Run());
                 //Verify
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>()), Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.OnMismatch)), Times.AtLeastOnce);
                 //Final results NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message published
@@ -478,15 +502,16 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.PreCondition;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.PreCondition;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.PreCondition).Returns(preCondition);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -495,7 +520,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //no exception
                 //Verify
                 steps.Verify(x => x.PreCondition, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.PreCondition)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -519,15 +546,16 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Prepare;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Prepare;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.Prepare).Returns(prepare);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -536,7 +564,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //no exception
                 //Verify
                 steps.Verify(x => x.Prepare, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.Prepare)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == excp
@@ -561,15 +591,16 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.SetContext;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.SetContext;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.SetContext).Returns(setContext);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -578,7 +609,9 @@ namespace WeirdScience.Tests
                 var result = sut.Run(); //no exception
                 //Verify
                 steps.Verify(x => x.SetContext, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.SetContext)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -599,20 +632,21 @@ namespace WeirdScience.Tests
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string> setup = () =>
+                Action<IExperimentEventArgs> setup = (args) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Setup;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Setup;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.Setup).Returns(setup);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.Setup(It.IsAny<IExperimentEventArgs>())).Callback(setup);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -620,8 +654,11 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run(); //no exception
                 //Verify
-                steps.Verify(x => x.Setup, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.Setup(It.Is<IExperimentEventArgs>(a => a.State.CurrentStep == Operations.Setup)), 
+                    Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.Setup)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -642,20 +679,21 @@ namespace WeirdScience.Tests
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string> teardown = () =>
+                Action<IExperimentEventArgs> setup = (args) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Func<IExperimentError, string> onError = (error) =>
+                Action<IErrorEventArgs> onError = (args) =>
                 {
-                    excpPassed = error.LastException == excp && error.LastStep == Operations.Teardown;
-                    return errMsg;
+                    excpPassed = args.Error.LastException == excp && args.Error.LastStep == Operations.Teardown;
+                    args.Publisher.Publish(errMsg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.Teardown).Returns(teardown);
-                steps.SetupGet(x => x.OnError).Returns(onError);
+                steps.Setup(x => x.Teardown(It.IsAny<IExperimentEventArgs>())).Callback(setup);
+                steps.Setup(x => x.OnError(It.IsAny<IErrorEventArgs>()))
+                    .Callback(onError);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -663,8 +701,11 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run(); //no exception
                 //Verify
-                steps.Verify(x => x.Teardown, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.Teardown(It.Is<IExperimentEventArgs>(a => 
+                    a.State.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(
+                    a => a.State.CurrentStep == Operations.OnError && a.Error.LastException == excp
+                    && a.Error.LastStep == Operations.Teardown)), Times.AtLeastOnce);
                 //Results correct
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.Value == ctrlResult
@@ -734,13 +775,17 @@ namespace WeirdScience.Tests
                 steps.Setup(x => x.GetCandidates())
                     .Returns(new Dictionary<string, Func<string>> { { candName, candidate } });
                 state.SetupAllProperties();
+                SetupStateSnapshot(state);
                 //Exercise
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run(); //No exceptions should be thrown
                 //Verify
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Setup called
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.Is<IMismatchEventArgs<string>>(
+                    a => a.CandidateException == excp && a.Control == ctrlResult)), Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(r => r.Error.LastException == excp 
+                    && r.State.CurrentStep == Operations.OnError && r.Error.LastStep == Operations.Candidate)), 
+                    Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Candidates.All(kvp => kvp.Key.Equals(candName) && kvp.Value.ExceptionThrown
@@ -785,14 +830,18 @@ namespace WeirdScience.Tests
                 steps.Setup(x => x.GetCandidates())
                     .Returns(new Dictionary<string, Func<string>> { { candName, candidate } });
                 state.SetupAllProperties();
+                SetupStateSnapshot(state);
                 //Exercise
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var thrown = Assert.Throws<InvalidProgramException>(() => sut.Run()); //Exceptions should be thrown
                 //Verify
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //GetCandidates STILL called
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce); //Diff exceptions, they're mismatched
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.Is<IMismatchEventArgs<string>>(
+                    r => r.CandidateException == candExcp && r.ControlException == ctrlExcp)), 
+                    Times.AtLeastOnce); //Diff exceptions, they're mismatched
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(a => a.State.CurrentStep == Operations.OnError)), 
+                    Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == ctrlExcp
@@ -818,14 +867,17 @@ namespace WeirdScience.Tests
                 steps.Setup(x => x.GetCandidates())
                     .Returns(new Dictionary<string, Func<string>> { { candName, function } });
                 state.SetupAllProperties();
+                SetupStateSnapshot(state);
                 //Exercise
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var thrown = Assert.Throws<InvalidProgramException>(() => sut.Run()); //Exceptions should be thrown
                 //Verify
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //GetCandidates STILL called
-                steps.Verify(x => x.OnMismatch, Times.Never); //Same exception, they're not mismatched
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>()),
+                    Times.Never); //Same exception, they're not mismatched
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(a => a.State.CurrentStep == Operations.OnError)),
+                    Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == excp
@@ -850,14 +902,18 @@ namespace WeirdScience.Tests
                 steps.Setup(x => x.Control)
                     .Returns(control);
                 state.SetupAllProperties();
+                SetupStateSnapshot(state);
                 //Exercise
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var thrown = Assert.Throws<InvalidProgramException>(() => sut.Run()); //Exceptions should be thrown
                 //Verify
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //GetCandidates STILL called
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
-                steps.Verify(x => x.OnError, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.Is<IMismatchEventArgs<string>>(
+                    r => r.Candidate == candResult && r.ControlException == excp)),
+                    Times.AtLeastOnce);
+                steps.Verify(x => x.OnError(It.Is<IErrorEventArgs>(a => a.State.CurrentStep == Operations.OnError)),
+                    Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
                     r => r.Control.ExceptionThrown && r.Control.ExperimentError.LastException == excp
@@ -911,7 +967,7 @@ namespace WeirdScience.Tests
                 //Verify
                 steps.Verify(x => x.Ignore, Times.AtLeastOnce);
                 steps.Verify(x => x.AreEqual, Times.Never);
-                steps.Verify(x => x.OnMismatch, Times.Never);
+                steps.Verify(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>()), Times.Never);
                 Assert.True(wasIgnored);
             }
 
@@ -922,15 +978,15 @@ namespace WeirdScience.Tests
             {
                 //Setup
                 var mismatchedCalled = false;
-                Func<string, string, Exception, Exception, string> onMismatch = (ctrl, cand, ctrlExc, candExc) =>
+                Action<IMismatchEventArgs<string>> onMismatch = (args) =>
                 {
-                    mismatchedCalled = ctrl == ctrlResult && cand == candResult;
-                    return msg;
+                    mismatchedCalled = args.Control == ctrlResult && args.Candidate == candResult;
+                    args.Publisher.Publish(msg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 steps.SetupGet(x => x.AreEqual).Returns((x, y) => false);
-                steps.SetupGet(x => x.OnMismatch).Returns(onMismatch);
+                steps.Setup(x => x.OnMismatch(It.IsAny<IMismatchEventArgs<string>>())).Callback(onMismatch);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -938,7 +994,8 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run();
                 //Verify
-                steps.Verify(x => x.OnMismatch, Times.AtLeastOnce);
+                steps.Verify(x => x.OnMismatch(It.Is<IMismatchEventArgs<string>>(
+                    a => a.Candidate == candResult && a.Control == ctrlResult)), Times.AtLeastOnce);
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
                     It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnMismatch)), Times.AtLeastOnce);
@@ -967,7 +1024,7 @@ namespace WeirdScience.Tests
                 var result = sut.Run();
                 //Verify
                 steps.Verify(x => x.PreCondition, Times.AtLeastOnce);
-                steps.Verify(x => x.Setup, Times.AtLeastOnce);
+                steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce);
                 Assert.True(conditionRan);
             }
 
@@ -1032,13 +1089,13 @@ namespace WeirdScience.Tests
                 string candName)
             {
                 //Setup
-                Func<string> setup = () =>
+                Action<IExperimentEventArgs> setup = (args) =>
                 {
-                    return msg;
+                    args.Publisher.Publish(msg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.Setup).Returns(setup);
+                steps.Setup(x => x.Setup(It.IsAny<IExperimentEventArgs>())).Callback(setup);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -1046,7 +1103,8 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run();
                 //Verify
-                steps.Verify(x => x.Setup, Times.AtLeastOnce); //Setup called
+                steps.Verify(x => x.Setup(It.Is<IExperimentEventArgs>(
+                    a => a.State.CurrentStep == Operations.Setup)), Times.AtLeastOnce); //Setup called
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
                     It.Is<IExperimentState>(y => y.CurrentStep == Operations.Setup)), Times.AtLeastOnce);
@@ -1058,13 +1116,13 @@ namespace WeirdScience.Tests
                 string candName)
             {
                 //Setup
-                Func<string> teardown = () =>
+                Action<IExperimentEventArgs> teardown = (args) =>
                 {
-                    return msg;
+                    args.Publisher.Publish(msg, args.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
-                steps.SetupGet(x => x.Teardown).Returns(teardown);
+                steps.Setup(x => x.Teardown(It.IsAny<IExperimentEventArgs>())).Callback(teardown);
                 SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
                 state.SetupAllProperties();
                 SetupStateSnapshot(state);
@@ -1072,7 +1130,8 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run();
                 //Verify
-                steps.Verify(x => x.Teardown, Times.AtLeastOnce); //Teardown called
+                steps.Verify(x => x.Teardown(It.Is<IExperimentEventArgs>(
+                    a => a.State.CurrentStep == Operations.Teardown)), Times.AtLeastOnce); //Teardown called
                 //Message published
                 publisher.Verify(x => x.Publish(msg,
                     It.Is<IExperimentState>(y => y.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);

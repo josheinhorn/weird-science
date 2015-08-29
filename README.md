@@ -5,21 +5,28 @@ Weird Science is a lightweight .NET library that helps to perform experiments in
 
 The below example creates an experiment using `Laboratory`'s static helper method and uses the Fluent Interface to build up an Experiment. (Note that the methods `DoSomething` and `DoSomethingElse` return `string` results)
 ```C#
-Laboratory.SetPublisher(new MyCustomPublisher());
+Laboratory.SetPublisher(new MyCustomPublisher()); //Users should set a publisher
 ```
 ```C#
 List<string> foo = GetStringList();
 string result = Laboratory.DoScience("Science!", () => DoSomething(foo))
-   .Candidate("candidate", () => DoSomethingElse(foo))
-   .PreCondition(() => foo.Count > 3)
-   .Setup(() => foo.Add("bar"))
-   .SetContext(() => new MyContextObject { Time = DateTime.Now, Name = "bar" })
-   .AreEqual((ctrl, cand) => ctrl.Length == cand.Length)
-   .OnMismatch((ctrl, cand, ctrlExcp, candExcp) => "Oops! Mismatch!!")
-   .Ignore((ctrl, cand) => cand.StartsWith("Hello"))
-   .OnError((err) => "Yikes, An error occurred!! " + err.ErrorMessage)
-   .Teardown(() => { foo.Remove("bar"); return foo.Count + " items left.";})
-   .Run(); //Executes everything and calls Publisher to write output
+    .Candidate("candidate", () => DoSomethingElse(foo))
+    .PreCondition(() => foo.Count > 3)
+    .Setup((sender, args) => foo.Add("bar"))
+    .SetContext(() => new MyContextObj { Time = DateTime.Now, Name = "bar" })
+    .AreEqual((ctrl, cand) => ctrl.Length == cand.Length)
+    .OnMismatch((sender, args) => "Oops! Mismatch!!")
+    .Ignore((ctrl, cand) => cand.StartsWith("Hello"))
+    .Prepare((val) => val.Substring(val.Length / 2))
+    .OnError((sender, args) =>
+        args.Publisher.Publish("Yikes, An error occurred!! " +
+        args.Error.ErrorMessage, args.State))
+    .Teardown((sender, args) =>
+        {
+            foo.Remove("bar");
+            args.Publisher.Publish(foo.Count + " items left.", args.State);
+        })
+    .Run(); //Executes everything and calls Publisher to write output
 
 // Continue execution of regular program, result is output from DoSomething(foo)
 ...
@@ -71,16 +78,16 @@ This is where the real magic happens. Users are required to write their own impl
 This method is called at the end of an Experiment run and is expected to perform some type of external I/O in order to persist some part of the results. `IExperimentResult<T>` contains a lot of info, including Elapsed Time, Exceptions thrown, the actual result (as set by the `Prepare` step) and a few other pieces of data.
 
 #### `void Publish<T>(string message, IExperimentState<T> state)`
-This method is called at various stages of the Experiment execution and is passed messages from the various delegate methods including:
+This method can be called by the four event handlers of the Experiment execution and is passed messages along with the State at the time the message was written. These four steps typically call this method:
 - Setup
 - OnMismatch
 - OnError
 - Teardown
 
-`state` contains relevant info for the context of the call.
+`state` contains relevant info for the context of the call, including the Step that called it and the configured Context object.
 
 ### Basic example
-A basic (albeit not very useful) example:
+A basic (albeit not very useful) implementation:
 
 ```C#
 public class ConsolePublisher : ISciencePublisher
@@ -191,11 +198,13 @@ This Step _does_ run for the Control.
 _Delegate Type:_ `Func<object>`
 
 ### Setup
-This is a function that runs before the Candidate is actually run, and optionally can return a `string`. The `string` result is passed to the Publisher. This Step can be used to prepare objects for use by the Candidates (such as cloning the original input object) as well as write messages to be used in the Publish process.
+This is a function that runs before the Candidate is actually run, and can use the configured Publisher to write messages and/or perform supporting actions. This Step can be used to prepare objects for use by the Candidates (such as cloning the original input object) as well as write messages to be used in the Publish process.
+
+This Step is `event` based &mdash; multiple handlers can be added to the same Experiment.
 
 This Step _does_ run for the Control.
 
-_Delegate Type:_ `Func<string>` _or_ `Action`
+_Delegate Type:_ `EventHandler<IExperimentEventArgs>`
 
 ### Candidate
 This is a function that will run and its result will be compared to the result of the Control. Users can define multiple Candidates and each must be assigned a unique name (`string` value).
@@ -219,13 +228,15 @@ This Step does _not_ run for the Control.
 _Delegate Type:_ `Func<T, T, bool>`
 
 ### OnMismatch
-This function is invoked if a Candidate result is not equal to the Control result, if one throws and Exception and the other does not, or if both throw Exceptions but the Exceptions are not equal. It can optionally return a `string` message that will be passed to the Publisher along with the current state of the Experiment.  
+This function is invoked if a Candidate result is not equal to the Control result, if one throws and Exception and the other does not, or if both throw Exceptions but the Exceptions are not equal. It can optionally use the configured Publisher to write out messages.
 
 **_Important_**: Because this step runs when Exceptions are thrown, there is very little fallback if this method throws an Exception. Though Weird Science _does_ handle such Exceptions, the Experiment execution is completely interrupted.
 
+This Step is `event` based &mdash; multiple handlers can be added to the same Experiment.
+
 This Step does _not_ run for the Control.
 
-_Delegate Type:_ `Func<T, T, Exception, Exception, string>` or `Action<T, T, Exception, Exception>`
+_Delegate Type:_ `EventHandler<IMismatchEventArgs<TPublish>>`
 
 ### Prepare
 This function can transform or alter the result of the Control and Candidates before results are stored for Publish. This is most often used when the actual result object is large (e.g. list of complex objects) or when you actually only care about a very small part of the result object. This function may return the same Type as the Control/Candidate functions, or an entirely different Type.
@@ -235,20 +246,24 @@ This Step _does_ run for the Control.
 _Delegate Type:_ `Func<T, TPublish>`
 
 ### Teardown
-This is a function that runs after the Candidate is run, and optionally can return a `string`. The `string` result is passed to the Publisher. This Step can be used to clean up objects (such as restoring things to a previous state) as well as write messages to be used in the Publish process.
+This is a function that runs after the Candidate is run, and can use the configured Publisher to write messages and/or perform supporting actions. This Step can be used to clean up objects (such as restoring things to a previous state) as well as write messages to be used in the Publish process.
+
+This Step is `event` based &mdash; multiple handlers can be added to the same Experiment.
 
 This Step _does_ run for the Control.
 
-_Delegate Type:_ `Func<string>` or `Action`
+_Delegate Type:_ `EventHandler<IExperimentEventArgs>`
 
 ### OnError
-This function runs when an Exception is thrown by one of the other steps. It will receive an `IExperimentError` object which contains relevant info about the failure, including the Exception thrown and which Step failed. It can optionally return a `string` that will be sent to the Publisher along with the current state.
+This function runs when an Exception is thrown by one of the other steps. In addition to the normal event args, it will receive an `IErrorEventArgs` which contains an `IExperimentError` object that contains relevant info about the failure, including the Exception thrown and which Step failed. It can optionally use the configured Publisher to write out messages.
 
 **_Important_**: There is very little fallback for this method if an Exception is thrown. Though Weird Science _does_ handle such Exceptions, the Experiment execution is completely interrupted.
 
+This Step is `event` based &mdash; multiple handlers can be added to the same Experiment.
+
 This Step _does_ run for the Control.
 
-_Delegate Type:_ `Func<IExperimentError, string>` _or_ `Action<IExperimentError>`
+_Delegate Type:_ `EventHandler<IErrorEventArgs>`
 
 ## Known limitations
 Obviously there is a limit to how much you can really test in a Production environment. There are a couple of use cases that don't fit Weird Science very well, though there are ways around them.
