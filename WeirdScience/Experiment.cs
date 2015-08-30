@@ -7,7 +7,7 @@ namespace WeirdScience
     // Consider state machine or state pattern? State pattern would make it harder to extend right?
     // Experiment is the primary point of Extensibility
 
-    // TODO: Move all error handling out of the Steps methods so extenders 
+    // TODO: Move all error handling out of the Steps methods so extenders
     public class Experiment<T, TPublish> : IScienceExperiment<T, TPublish>
     {
         #region Private Fields
@@ -79,11 +79,6 @@ namespace WeirdScience
             return Steps.AreEqual == null ?
                 EqualityComparer<T>.Default.Equals(control, candidate)
                 : Steps.AreEqual(control, candidate);
-        }
-
-        public virtual object SetContext()
-        {
-            return Steps.SetContext != null ? Steps.SetContext() : null;
         }
 
         public virtual bool Ignore(T control, T candidate)
@@ -182,6 +177,16 @@ namespace WeirdScience
             return Steps.RunInParallel == null ? false : Steps.RunInParallel();
         }
 
+        public virtual object SetContext()
+        {
+            return Steps.SetContext != null ? Steps.SetContext() : null;
+        }
+
+        public virtual long SetTimeout()
+        {
+            return Steps.SetTimeout == null ? 0 : Steps.SetTimeout();
+        }
+
         public virtual void Setup(ExperimentEventArgs args)
         {
             Steps.Setup(args);
@@ -190,11 +195,6 @@ namespace WeirdScience
         public virtual void Teardown(ExperimentEventArgs args)
         {
             Steps.Teardown(args);
-        }
-
-        public virtual long SetTimeout()
-        {
-            return Steps.SetTimeout == null ? 0 : Steps.SetTimeout();
         }
 
         #endregion Public Methods
@@ -400,21 +400,17 @@ namespace WeirdScience
         }
 
         #region Try Steps
-        private T TryCandidate(Func<T> candidate)
-        {
-            CurrentState.CurrentStep = Operations.Candidate;
-            return TryOp(candidate);
-        }
+
         private bool TryAreEqual(T control, T candidate)
         {
             CurrentState.CurrentStep = Operations.AreEqual;
             return TryOp(() => AreEqual(control, candidate));
         }
 
-        private object TrySetContext()
+        private T TryCandidate(Func<T> candidate)
         {
-            CurrentState.CurrentStep = Operations.SetContext;
-            return TryOp(SetContext);
+            CurrentState.CurrentStep = Operations.Candidate;
+            return TryOp(candidate);
         }
 
         private bool TryIgnore(T control, T candidate)
@@ -440,9 +436,15 @@ namespace WeirdScience
             CurrentState.CurrentStep = Operations.OnMismatch;
             TryOp(() =>
             {
-                OnMismatch(new MismatchEventArgs<T> { Publisher = Publisher, State = CurrentState.Snapshot(),
-                    Control = control, Candidate = candidate, ControlException = controlException,
-                    CandidateException  = candidateException});
+                OnMismatch(new MismatchEventArgs<T>
+                {
+                    Publisher = Publisher,
+                    State = CurrentState.Snapshot(),
+                    Control = control,
+                    Candidate = candidate,
+                    ControlException = controlException,
+                    CandidateException = candidateException
+                });
                 return 0;
             });
         }
@@ -477,6 +479,18 @@ namespace WeirdScience
             return TryOp(RunInParallel);
         }
 
+        private object TrySetContext()
+        {
+            CurrentState.CurrentStep = Operations.SetContext;
+            return TryOp(SetContext);
+        }
+
+        private long TrySetTimeout()
+        {
+            CurrentState.CurrentStep = Operations.SetTimeout;
+            return TryOp(SetTimeout);
+        }
+
         private void TrySetup()
         {
             CurrentState.CurrentStep = Operations.Setup;
@@ -497,11 +511,6 @@ namespace WeirdScience
             });
         }
 
-        private long TrySetTimeout()
-        {
-            CurrentState.CurrentStep = Operations.SetTimeout;
-            return TryOp(SetTimeout);
-        }
         #endregion Try Steps
 
         #endregion Private Methods

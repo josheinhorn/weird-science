@@ -60,7 +60,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.AreEqual;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.AreEqual;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -103,7 +104,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Candidate;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Candidate;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 Func<string> candidate = () =>
@@ -148,7 +150,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Control;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Control;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 Func<string> control = () =>
@@ -218,7 +221,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Ignore;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Ignore;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -419,7 +423,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.OnMismatch;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.OnMismatch;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -461,7 +466,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.OnMismatch;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.OnMismatch;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -504,7 +510,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.PreCondition;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.PreCondition;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -548,7 +555,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Prepare;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Prepare;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -593,7 +601,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.SetContext;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.SetContext;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -639,7 +648,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Setup;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Setup;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -654,7 +664,7 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run(); //no exception
                 //Verify
-                steps.Verify(x => x.Setup(It.Is<ExperimentEventArgs>(a => a.State.CurrentStep == Operations.Setup)), 
+                steps.Verify(x => x.Setup(It.Is<ExperimentEventArgs>(a => a.State.CurrentStep == Operations.Setup)),
                     Times.AtLeastOnce);
                 steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(
                     a => a.State.CurrentStep == Operations.OnError && a.ExperimentError.LastException == excp
@@ -686,7 +696,8 @@ namespace WeirdScience.Tests
                 bool excpPassed = false;
                 Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Teardown;
+                    excpPassed = e.ExperimentError.LastException == excp
+                        && e.ExperimentError.LastStep == Operations.Teardown;
                     e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
@@ -701,7 +712,7 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run(); //no exception
                 //Verify
-                steps.Verify(x => x.Teardown(It.Is<ExperimentEventArgs>(a => 
+                steps.Verify(x => x.Teardown(It.Is<ExperimentEventArgs>(a =>
                     a.State.CurrentStep == Operations.Teardown)), Times.AtLeastOnce);
                 steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(
                     a => a.State.CurrentStep == Operations.OnError && a.ExperimentError.LastException == excp
@@ -783,8 +794,9 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Setup called
                 steps.Verify(x => x.OnMismatch(It.Is<MismatchEventArgs<string>>(
                     a => a.CandidateException == excp && a.Control == ctrlResult)), Times.AtLeastOnce);
-                steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(r => r.ExperimentError.LastException == excp 
-                    && r.State.CurrentStep == Operations.OnError && r.ExperimentError.LastStep == Operations.Candidate)), 
+                steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(r => r.ExperimentError.LastException == excp
+                    && r.State.CurrentStep == Operations.OnError
+                    && r.ExperimentError.LastStep == Operations.Candidate)),
                     Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
@@ -838,9 +850,9 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //GetCandidates STILL called
                 steps.Verify(x => x.OnMismatch(It.Is<MismatchEventArgs<string>>(
-                    r => r.CandidateException == candExcp && r.ControlException == ctrlExcp)), 
+                    r => r.CandidateException == candExcp && r.ControlException == ctrlExcp)),
                     Times.AtLeastOnce); //Diff exceptions, they're mismatched
-                steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(a => a.State.CurrentStep == Operations.OnError)), 
+                steps.Verify(x => x.OnError(It.Is<ErrorEventArgs>(a => a.State.CurrentStep == Operations.OnError)),
                     Times.AtLeastOnce);
                 //Results published
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(

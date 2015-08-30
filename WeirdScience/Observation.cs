@@ -16,13 +16,13 @@
             internal set;
         }
 
-        public IExperimentError ExperimentError
+        public bool ExceptionThrown
         {
             get;
             internal set;
         }
 
-        public bool ExceptionThrown
+        public IExperimentError ExperimentError
         {
             get;
             internal set;

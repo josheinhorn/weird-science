@@ -1,22 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     internal class ControlBuilder<T, TPublish> : IControlBuilder<T, TPublish>
     {
-        private IExperimentSteps<T, TPublish> steps;
+        #region Private Fields
+
         private IScienceExperiment<T, TPublish> experiment;
+        private IExperimentSteps<T, TPublish> steps;
+
+        #endregion Private Fields
+
+        #region Internal Constructors
 
         internal ControlBuilder(IScienceExperiment<T, TPublish> experiment)
         {
             this.experiment = experiment;
             steps = experiment.Steps;
         }
-        
+
+        #endregion Internal Constructors
+
+        #region Public Methods
+
         public IExperimentBuilder<T, TPublish> Candidate(string name, Func<T> candidate)
         {
             steps.AddCandidate(name, candidate);
@@ -29,5 +35,6 @@ namespace WeirdScience
             return new CandidateBuilder<T, TPublish>(experiment);
         }
 
+        #endregion Public Methods
     }
 }

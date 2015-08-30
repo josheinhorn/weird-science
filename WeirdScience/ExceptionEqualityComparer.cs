@@ -22,7 +22,7 @@ namespace WeirdScience
 
         public int GetHashCode(Exception obj)
         {
-            return obj.GetHashCode();
+            return obj.GetType().GetHashCode() * 17 + obj.Message.GetHashCode();
         }
 
         #endregion Public Methods

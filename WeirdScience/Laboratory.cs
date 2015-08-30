@@ -44,6 +44,7 @@ namespace WeirdScience
         #endregion Public Static Methods
 
         #region Private Fields
+
         private ISciencePublisher publisher;
         private bool throwOnInternalExceptions;
 

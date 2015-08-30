@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WeirdScience
 {
     public class MismatchEventArgs<T> : ExperimentEventArgs, IMismatchEventArgs<T>
     {
+        #region Public Properties
+
         public T Candidate
         {
             get; internal set;
@@ -27,5 +25,7 @@ namespace WeirdScience
         {
             get; internal set;
         }
+
+        #endregion Public Properties
     }
 }

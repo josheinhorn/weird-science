@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace WeirdScience
+﻿namespace WeirdScience
 {
     public class ErrorEventArgs : ExperimentEventArgs, IErrorEventArgs
     {
+        #region Public Properties
+
         public IExperimentError ExperimentError
         {
             get; internal set;
         }
+
+        #endregion Public Properties
     }
 }

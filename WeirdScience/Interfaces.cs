@@ -4,6 +4,12 @@ using System.ComponentModel;
 
 namespace WeirdScience
 {
+    public delegate bool AreEqualDelegate<in T>(T control, T candidate);
+
+    public delegate bool IgnoreDelegate<in T>(T control, T candidate);
+
+    public delegate TPublish PrepareDelegate<in T, out TPublish>(T result);
+
     public enum Operations
     {
         Internal = 0, //Exception happened in WeirdScience code, this is default
@@ -47,15 +53,7 @@ namespace WeirdScience
 
         #endregion Public Methods
     }
-    public delegate bool AreEqualDelegate<in T>(T control, T candidate);
-    public delegate bool IgnoreDelegate<in T>(T control, T candidate);
-    public delegate TPublish PrepareDelegate<in T, out TPublish>(T result);
-    public interface ILaboratory
-    {
-        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string experimentName);
-        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(IScienceExperiment<T, TPublish> custom);
 
-    }
     public interface IErrorEventArgs : IExperimentEventArgs
     {
         #region Public Properties
@@ -106,8 +104,8 @@ namespace WeirdScience
         #region Public Methods
 
         /// <summary>
-        /// Sets a method to determine if two results are equivalent with the signature:
-        /// bool function(T control, T candidate)
+        /// Sets a method to determine if two results are equivalent with the signature: bool
+        /// function(T control, T candidate)
         /// </summary>
         /// <param name="compare"></param>
         /// <returns></returns>
@@ -115,8 +113,8 @@ namespace WeirdScience
 
         /// <summary>
         /// Sets a method to determine if a set of results should be ignored for further comparison.
-        /// The results will still be stored for Publish regardless. The method should have the signature:
-        /// bool function(T control, T candidate)
+        /// The results will still be stored for Publish regardless. The method should have the
+        /// signature: bool function(T control, T candidate)
         /// </summary>
         /// <param name="ignoreIf"></param>
         /// <returns></returns>
@@ -144,8 +142,8 @@ namespace WeirdScience
         IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<MismatchEventArgs<T>> handler);
 
         /// <summary>
-        /// Sets a method to determine whether or not to run the Candidates. Use this to conditionally run 
-        /// Experiments and reduce added load.
+        /// Sets a method to determine whether or not to run the Candidates. Use this to
+        /// conditionally run Experiments and reduce added load.
         /// </summary>
         /// <param name="runIf"></param>
         /// <returns></returns>
@@ -248,19 +246,15 @@ namespace WeirdScience
         #region Public Properties
 
         event EventHandler<ErrorEventArgs> OnErrorEvent;
-        void OnError(ErrorEventArgs args);
 
         event EventHandler<MismatchEventArgs<T>> OnMismatchEvent;
 
         event EventHandler<ExperimentEventArgs> SetupEvent;
 
         event EventHandler<ExperimentEventArgs> TeardownEvent;
-        void OnMismatch(MismatchEventArgs<T> args);
 
-        void Setup(ExperimentEventArgs args);
-
-        void Teardown(ExperimentEventArgs args);
         AreEqualDelegate<T> AreEqual { get; set; }
+
         Func<T> Control { get; set; }
 
         IgnoreDelegate<T> Ignore { get; set; }
@@ -278,6 +272,14 @@ namespace WeirdScience
         void AddCandidate(string name, Func<T> candidate);
 
         IEnumerable<KeyValuePair<string, Func<T>>> GetCandidates();
+
+        void OnError(ErrorEventArgs args);
+
+        void OnMismatch(MismatchEventArgs<T> args);
+
+        void Setup(ExperimentEventArgs args);
+
+        void Teardown(ExperimentEventArgs args);
 
         #endregion Public Properties
     }
@@ -306,7 +308,18 @@ namespace WeirdScience
         #endregion Public Methods
     }
 
-    public interface IMismatchEventArgs<T> : IExperimentEventArgs
+    public interface ILaboratory
+    {
+        #region Public Methods
+
+        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string experimentName);
+
+        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(IScienceExperiment<T, TPublish> custom);
+
+        #endregion Public Methods
+    }
+
+    public interface IMismatchEventArgs<out T> : IExperimentEventArgs
     {
         #region Public Properties
 
@@ -318,7 +331,7 @@ namespace WeirdScience
         #endregion Public Properties
     }
 
-    public interface IObservation<T>
+    public interface IObservation<out T>
     {
         #region Public Properties
 
@@ -380,7 +393,7 @@ namespace WeirdScience
         #endregion Public Methods
     }
 
-    public interface ISciencePublisher //TODO: Figure out how to write messages along the process
+    public interface ISciencePublisher
     {
         #region Public Methods
 

@@ -6,17 +6,18 @@ namespace WeirdScience
     {
         #region Private Fields
 
+        private object _context;
         private string _name;
         private Operations _step;
-        private object _context;
+
         #endregion Private Fields
 
         #region Public Properties
 
-        public string Name
+        public object Context
         {
-            get { return _name; }
-            set { _name = value; Timestamp = DateTime.UtcNow; }
+            get { return _context; }
+            set { _context = value; Timestamp = DateTime.UtcNow; }
         }
 
         public Operations CurrentStep
@@ -25,13 +26,13 @@ namespace WeirdScience
             set { _step = value; Timestamp = DateTime.UtcNow; }
         }
 
-        public DateTime Timestamp { get; private set; }
-
-        public object Context
+        public string Name
         {
-            get { return _context; }
-            set { _context = value; Timestamp = DateTime.UtcNow; }
+            get { return _name; }
+            set { _name = value; Timestamp = DateTime.UtcNow; }
         }
+
+        public DateTime Timestamp { get; private set; }
 
         #endregion Public Properties
 

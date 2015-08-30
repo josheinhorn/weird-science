@@ -8,11 +8,12 @@ namespace WeirdScience
 
         private IScienceExperiment<T, TPublish> experiment;
         private IExperimentSteps<T, TPublish> steps;
+
         #endregion Private Fields
 
         #region Public Constructors
 
-        internal CandidateBuilder(IScienceExperiment<T, TPublish> experiment) 
+        internal CandidateBuilder(IScienceExperiment<T, TPublish> experiment)
         {
             this.experiment = experiment;
             steps = experiment.Steps;
