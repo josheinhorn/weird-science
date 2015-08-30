@@ -24,7 +24,7 @@ namespace WeirdScience
 
         public event EventHandler<ExperimentEventArgs> TeardownEvent;
 
-        public Func<T, T, bool> AreEqual
+        public AreEqualDelegate<T> AreEqual
         {
             get; set;
         }
@@ -34,7 +34,7 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<T, T, bool> Ignore
+        public IgnoreDelegate<T> Ignore
         {
             get; set;
         }
@@ -44,7 +44,7 @@ namespace WeirdScience
             get; set;
         }
 
-        public Func<T, TPublish> Prepare
+        public PrepareDelegate<T, TPublish> Prepare
         {
             get; set;
         }

@@ -12,19 +12,19 @@ List<string> foo = GetStringList();
 string result = Laboratory.DoScience("Science!", () => DoSomething(foo))
     .Candidate("candidate", () => DoSomethingElse(foo))
     .PreCondition(() => foo.Count > 3)
-    .Setup((sender, args) => foo.Add("bar"))
+    .Setup((sender, e) => foo.Add("bar"))
     .SetContext(() => new MyContextObj { Time = DateTime.Now, Name = "bar" })
     .AreEqual((ctrl, cand) => ctrl.Length == cand.Length)
-    .OnMismatch((sender, args) => "Oops! Mismatch!!")
+    .OnMismatch((sender, e) => "Oops! Mismatch!!")
     .Ignore((ctrl, cand) => cand.StartsWith("Hello"))
     .Prepare((val) => val.Substring(val.Length / 2))
-    .OnError((sender, args) =>
-        args.Publisher.Publish("Yikes, An error occurred!! " +
-        args.Error.ErrorMessage, args.State))
-    .Teardown((sender, args) =>
+    .OnError((sender, e) =>
+        e.Publisher.Publish("Yikes, An error occurred!! " +
+        e.Error.ErrorMessage, e.State))
+    .Teardown((sender, e) =>
         {
             foo.Remove("bar");
-            args.Publisher.Publish(foo.Count + " items left.", args.State);
+            e.Publisher.Publish(foo.Count + " items left.", e.State);
         })
     .Run(); //Executes everything and calls Publisher to write output
 
@@ -131,14 +131,14 @@ If you desire a bit more control over your workspace, you can instantiate your o
 ```C#
  var lab = new Laboratory(new StatsDPublisher());
  lab
-    .BuildExperiment<string, char>("Science!")
+    .CreateExperiment<string, char>("Science!")
     .Control(() => DoSomething(foo))
     .Candidate(() => DoSomething(bar))
     .Prepare((val) => val.ToCharArray().FirstOrDefault())
     ...
 ```
 
-If you're feeling even more adventurous, you can alternatively pass in a custom `IExperiment` to the `BuildExperiment` method!
+If you're feeling even more adventurous, you can alternatively pass in a custom `IExperiment` to the `CreateExperiment` method!
 
 ## The Experiment
 Behind the scenes of the `Laboratory`, the majority of work is actually being done by an `IExperiment` object. The basic implementation is `WeirdScience.Experiment` but users of the library are more than welcome to extend and override certain methods to give even greater control. For instance, you might _always_ want to do the exact same thing for the `OnMismatch` step. Instead of passing the same delegate all the time, you could create your own `Experiment`:
@@ -166,7 +166,7 @@ var myLab = new Laboratory(publisher);
 var myExperiment =
     new MyCustomExperiment<string, string>("Customized!", customPublisher);
 myLab
-    .BuildExperiment(myExperiment) // override the default Experiment here
+    .CreateExperiment(myExperiment) // override the default Experiment here
     .Control(() => DoSomething(foo))
     .Candidate(() => DoSomething(bar))
     ...
@@ -221,7 +221,7 @@ The arguments are passed to the delegate as follows: `(T control, T candidate)`
 
 This Step does _not_ run for the Control.
 
-_Delegate Type:_ `Func<T, T, bool>`
+_Delegate Type:_ `IgnoreDelegate<T>`
 
 ### AreEqual
 This function determines if two results are equivalent &mdash; `true` if they are and `false` if they are not. The default for this is to use `EqualityComparer<T>.Default`. There is no guarantee that both values are not null.
@@ -230,7 +230,7 @@ The arguments are passed to the delegate as follows: `(T control, T candidate)`
 
 This Step does _not_ run for the Control.
 
-_Delegate Type:_ `Func<T, T, bool>`
+_Delegate Type:_ `AreEqualDelegate<T>`
 
 ### OnMismatch
 This function is invoked if a Candidate result is not equal to the Control result, if one throws and Exception and the other does not, or if both throw Exceptions but the Exceptions are not equal. It can optionally use the configured Publisher to write out messages.
@@ -248,7 +248,7 @@ This function can transform or alter the result of the Control and Candidates be
 
 This Step _does_ run for the Control.
 
-_Delegate Type:_ `Func<T, TPublish>`
+_Delegate Type:_ `PrepareDelegate<T, TPublish>`
 
 ### Teardown
 This is a function that runs after the Candidate is run, and can use the configured Publisher to write messages and/or perform supporting actions. This Step can be used to clean up objects (such as restoring things to a previous state) as well as write messages to be used in the Publish process.

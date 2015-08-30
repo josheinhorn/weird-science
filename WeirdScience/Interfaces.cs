@@ -47,6 +47,9 @@ namespace WeirdScience
 
         #endregion Public Methods
     }
+    public delegate bool AreEqualDelegate<in T>(T control, T candidate);
+    public delegate bool IgnoreDelegate<in T>(T control, T candidate);
+    public delegate TPublish PrepareDelegate<in T, out TPublish>(T result);
     public interface ILaboratory
     {
         IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string experimentName);
@@ -108,7 +111,7 @@ namespace WeirdScience
         /// </summary>
         /// <param name="compare"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> AreEqual(Func<T, T, bool> compare);
+        IExperimentOptionsBuilder<T, TPublish> AreEqual(AreEqualDelegate<T> compare);
 
         /// <summary>
         /// Sets a method to determine if a set of results should be ignored for further comparison.
@@ -117,7 +120,7 @@ namespace WeirdScience
         /// </summary>
         /// <param name="ignoreIf"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Ignore(Func<T, T, bool> ignoreIf);
+        IExperimentOptionsBuilder<T, TPublish> Ignore(IgnoreDelegate<T> ignoreIf);
 
         /// <summary>
         /// Sets an action to perform if an error occurs.
@@ -158,7 +161,7 @@ namespace WeirdScience
         /// </remarks>
         /// <param name="prepare"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Prepare(Func<T, TPublish> prepare);
+        IExperimentOptionsBuilder<T, TPublish> Prepare(PrepareDelegate<T, TPublish> prepare);
 
         /// <summary>
         /// Runs the Experiment and returns the result from the Control or throws the Exception that
@@ -257,16 +260,14 @@ namespace WeirdScience
         void Setup(ExperimentEventArgs args);
 
         void Teardown(ExperimentEventArgs args);
-        Func<T, T, bool> AreEqual { get; set; }
+        AreEqualDelegate<T> AreEqual { get; set; }
         Func<T> Control { get; set; }
 
-        Func<T, T, bool> Ignore { get; set; }
+        IgnoreDelegate<T> Ignore { get; set; }
 
         Func<bool> PreCondition { get; set; }
 
-        Func<T, TPublish> Prepare { get; set; }
-
-        Action<IExperimentResult<TPublish>> Publish { get; set; }
+        PrepareDelegate<T, TPublish> Prepare { get; set; }
 
         Func<bool> RunInParallel { get; set; }
 

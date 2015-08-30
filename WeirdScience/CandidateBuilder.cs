@@ -22,7 +22,7 @@ namespace WeirdScience
 
         #region Public Methods
 
-        public IExperimentOptionsBuilder<T, TPublish> AreEqual(Func<T, T, bool> compare)
+        public IExperimentOptionsBuilder<T, TPublish> AreEqual(AreEqualDelegate<T> compare)
         {
             if (compare == null) throw new ArgumentNullException("compare");
             steps.AreEqual = compare;
@@ -37,7 +37,7 @@ namespace WeirdScience
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> Ignore(Func<T, T, bool> ignoreIf)
+        public IExperimentOptionsBuilder<T, TPublish> Ignore(IgnoreDelegate<T> ignoreIf)
         {
             if (ignoreIf == null) throw new ArgumentNullException("ignoreIf");
             steps.Ignore = ignoreIf;
@@ -65,7 +65,7 @@ namespace WeirdScience
             return this;
         }
 
-        public IExperimentOptionsBuilder<T, TPublish> Prepare(Func<T, TPublish> prepare)
+        public IExperimentOptionsBuilder<T, TPublish> Prepare(PrepareDelegate<T, TPublish> prepare)
         {
             if (prepare == null) throw new ArgumentNullException("prepare");
             steps.Prepare = prepare;

@@ -27,7 +27,7 @@ namespace WeirdScience
         }
 
         public static IExperimentBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
-            Func<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
+            PrepareDelegate<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
         {
             var builder = new Laboratory(_publisher, throwOnInternalExceptions)
                 .CreateExperiment<T, TPublish>(name)

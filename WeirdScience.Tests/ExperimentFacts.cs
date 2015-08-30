@@ -53,15 +53,15 @@ namespace WeirdScience.Tests
                string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string, string, bool> areEqual = (ctrl, cand) =>
+                AreEqualDelegate<string> areEqual = (ctrl, cand) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.AreEqual;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.AreEqual;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -101,10 +101,10 @@ namespace WeirdScience.Tests
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Candidate;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Candidate;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 Func<string> candidate = () =>
                 {
@@ -146,10 +146,10 @@ namespace WeirdScience.Tests
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Control;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Control;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 Func<string> control = () =>
                 {
@@ -211,15 +211,15 @@ namespace WeirdScience.Tests
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string, string, bool> ignore = (ctrl, cand) =>
+                IgnoreDelegate<string> ignore = (ctrl, cand) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Ignore;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Ignore;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -333,7 +333,7 @@ namespace WeirdScience.Tests
                 ApplicationException otherExcp)
             {
                 //Setup
-                Action<MismatchEventArgs<string>> onMismatch = (args) =>
+                Action<MismatchEventArgs<string>> onMismatch = (e) =>
                 {
                     throw otherExcp;
                 };
@@ -373,7 +373,7 @@ namespace WeirdScience.Tests
                string candName, InvalidProgramException excp, ApplicationException otherExcp)
             {
                 //Setup
-                Action<MismatchEventArgs<string>> onMismatch = (args) =>
+                Action<MismatchEventArgs<string>> onMismatch = (e) =>
                 {
                     throw otherExcp;
                 };
@@ -412,15 +412,15 @@ namespace WeirdScience.Tests
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Action<MismatchEventArgs<string>> onMismatch = (args) =>
+                Action<MismatchEventArgs<string>> onMismatch = (e) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.OnMismatch;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.OnMismatch;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -454,15 +454,15 @@ namespace WeirdScience.Tests
                 string ctrlResult, string candResult, string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Action<MismatchEventArgs<string>> onMismatch = (args) =>
+                Action<MismatchEventArgs<string>> onMismatch = (e) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.OnMismatch;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.OnMismatch;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -502,10 +502,10 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.PreCondition;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.PreCondition;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -541,15 +541,15 @@ namespace WeirdScience.Tests
                string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Func<string, string> prepare = (val) =>
+                PrepareDelegate<string, string> prepare = (val) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Prepare;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Prepare;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -591,10 +591,10 @@ namespace WeirdScience.Tests
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.SetContext;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.SetContext;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -632,15 +632,15 @@ namespace WeirdScience.Tests
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Action<ExperimentEventArgs> setup = (args) =>
+                Action<ExperimentEventArgs> setup = (e) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Setup;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Setup;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -679,15 +679,15 @@ namespace WeirdScience.Tests
                 string candName, InvalidProgramException excp, string errMsg)
             {
                 //Setup
-                Action<ExperimentEventArgs> setup = (args) =>
+                Action<ExperimentEventArgs> setup = (e) =>
                 {
                     throw excp;
                 };
                 bool excpPassed = false;
-                Action<ErrorEventArgs> onError = (args) =>
+                Action<ErrorEventArgs> onError = (e) =>
                 {
-                    excpPassed = args.ExperimentError.LastException == excp && args.ExperimentError.LastStep == Operations.Teardown;
-                    args.Publisher.Publish(errMsg, args.State);
+                    excpPassed = e.ExperimentError.LastException == excp && e.ExperimentError.LastStep == Operations.Teardown;
+                    e.Publisher.Publish(errMsg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -738,7 +738,7 @@ namespace WeirdScience.Tests
             {
                 //Setup
                 var mismatched = false;
-                Func<string, string, bool> areEqual = (ctrl, cand) =>
+                AreEqualDelegate<string> areEqual = (ctrl, cand) =>
                 {
                     mismatched = ctrl.Length == cand.Length;
                     return !mismatched;
@@ -951,7 +951,7 @@ namespace WeirdScience.Tests
             {
                 //Setup
                 bool wasIgnored = false;
-                Func<string, string, bool> ignore = (ctrl, cand) =>
+                IgnoreDelegate<string> ignore = (ctrl, cand) =>
                 {
                     wasIgnored = ctrl == ctrlResult && cand == candResult;
                     return wasIgnored;
@@ -978,10 +978,10 @@ namespace WeirdScience.Tests
             {
                 //Setup
                 var mismatchedCalled = false;
-                Action<MismatchEventArgs<string>> onMismatch = (args) =>
+                Action<MismatchEventArgs<string>> onMismatch = (e) =>
                 {
-                    mismatchedCalled = args.Control == ctrlResult && args.Candidate == candResult;
-                    args.Publisher.Publish(msg, args.State);
+                    mismatchedCalled = e.Control == ctrlResult && e.Candidate == candResult;
+                    e.Publisher.Publish(msg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -1035,7 +1035,7 @@ namespace WeirdScience.Tests
             {
                 //Setup
                 var preparedCalled = false;
-                Func<string, string> prepare = (val) =>
+                PrepareDelegate<string, string> prepare = (val) =>
                 {
                     preparedCalled = val == candResult || val == ctrlResult;
                     return prepared;
@@ -1089,9 +1089,9 @@ namespace WeirdScience.Tests
                 string candName)
             {
                 //Setup
-                Action<ExperimentEventArgs> setup = (args) =>
+                Action<ExperimentEventArgs> setup = (e) =>
                 {
-                    args.Publisher.Publish(msg, args.State);
+                    e.Publisher.Publish(msg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
@@ -1116,9 +1116,9 @@ namespace WeirdScience.Tests
                 string candName)
             {
                 //Setup
-                Action<ExperimentEventArgs> teardown = (args) =>
+                Action<ExperimentEventArgs> teardown = (e) =>
                 {
-                    args.Publisher.Publish(msg, args.State);
+                    e.Publisher.Publish(msg, e.State);
                 };
                 steps.DefaultValue = DefaultValue.Empty;
                 steps.SetupAllProperties();
