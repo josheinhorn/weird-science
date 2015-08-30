@@ -124,20 +124,21 @@ public class ConsolePublisher : ISciencePublisher
 ```
 
 ## The Laboratory
-The Laboratory class has a set of static methods to get Experiments running quickly. It is important to note that you must call the `SetPublisher(ISciencePublisher)` method and pass in the Publisher of your choosing in order to reap the benefits of Weird Science.
+The Laboratory class has a set of static methods to get Experiments running quickly. It is important to note that when you use the static helpers, you must first call the `SetPublisher(ISciencePublisher)` method and pass in the Publisher of your choosing in order to reap the benefits of Weird Science.
 
-If you desire a bit more control over your workspace, you can instantiate your own `Laboratory<T, TPublish>` and pass in the desired constructor arguments. You can also actually extend the `Laboratory` class if even greater flexibility is desired.
+If you desire a bit more control over your workspace, you can instantiate your own `Laboratory<T, TPublish>` and pass in your Publisher (and optionally set a flag to throw Weird Science internal exceptions for debugging purposes). You can also actually extend the `Laboratory` class if even greater flexibility is desired.
 
 ```C#
- var lab = new Laboratory<string, char>("Science!", new StatsDPublisher());
+ var lab = new Laboratory(new StatsDPublisher());
  lab
+    .BuildExperiment<string, char>("Science!")
     .Control(() => DoSomething(foo))
     .Candidate(() => DoSomething(bar))
     .Prepare((val) => val.ToCharArray().FirstOrDefault())
     ...
 ```
 
-If you're feeling even more adventurous, you can even pass in a custom `IExperiment` to the `Laboratory`!
+If you're feeling even more adventurous, you can alternatively pass in a custom `IExperiment` to the `BuildExperiment` method!
 
 ## The Experiment
 Behind the scenes of the `Laboratory`, the majority of work is actually being done by an `IExperiment` object. The basic implementation is `WeirdScience.Experiment` but users of the library are more than welcome to extend and override certain methods to give even greater control. For instance, you might _always_ want to do the exact same thing for the `OnMismatch` step. Instead of passing the same delegate all the time, you could create your own `Experiment`:
@@ -148,27 +149,27 @@ public class MyCustomExperiment<T, TPublish> : Experiment<T, TPublish>
   public MyCustomExperiment(string name, ISciencePublisher publisher)
     : base(string name, ISciencePublisher publisher)
     { }
-  public override string OnMismatch(T control, T candidate,
-    Exception controlException, Exception candidateException)
+  public override string OnMismatch(MismatchEventArgs<T> args)
   {
       // Can still use delegates in addition to custom implementation
       // by calling the Base method
-      var baseMsg = base.OnMismatch(control, candidate,
-        controlException, candidateException);
-      return string.Format("There was a mismatch: {0}, {1}, {2}, {3}",
-        candidate, control, candidateException, controlException);
+      var baseMsg = base.OnMismatch(args);
+      args.Publisher.Publish(string.Format("There was a mismatch: {0}, {1}, {2}, {3}",
+        args.Candidate, args.Control, arg.CandidateException, args.ControlException)
+        , args.State);
   }
 }
 ```
 
 ```C#
+var myLab = new Laboratory(publisher);
 var myExperiment =
-    new MyCustomExperiment<string, string>("Customized!", new CustomPublisher());
-var myLab = new Laboratory<string, string>(myExperiment);
+    new MyCustomExperiment<string, string>("Customized!", customPublisher);
 myLab
-   .Control(() => DoSomething(foo))
-   .Candidate(() => DoSomething(bar))
-   ...
+    .BuildExperiment(myExperiment) // override the default Experiment here
+    .Control(() => DoSomething(foo))
+    .Candidate(() => DoSomething(bar))
+    ...
 ```
 
 The base implementation of `Experiment` handles Exceptions and tracking state, so implementers do not need to worry about the internal details.

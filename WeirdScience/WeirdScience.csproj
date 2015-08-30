@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="CandidateBuilder.cs" />
     <Compile Include="ConsolePublisher.cs" />
+    <Compile Include="ControlBuilder.cs" />
     <Compile Include="MismatchEventArgs .cs" />
     <Compile Include="ErrorEventArgs.cs" />
     <Compile Include="ExceptionEqualityComparer.cs" />

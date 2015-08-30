@@ -16,13 +16,13 @@ namespace WeirdScience
 
         #region Public Properties
 
-        public event EventHandler<IErrorEventArgs> OnErrorEvent;
+        public event EventHandler<ErrorEventArgs> OnErrorEvent;
 
-        public event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
+        public event EventHandler<MismatchEventArgs<T>> OnMismatchEvent;
 
-        public event EventHandler<IExperimentEventArgs> SetupEvent;
+        public event EventHandler<ExperimentEventArgs> SetupEvent;
 
-        public event EventHandler<IExperimentEventArgs> TeardownEvent;
+        public event EventHandler<ExperimentEventArgs> TeardownEvent;
 
         public Func<T, T, bool> AreEqual
         {
@@ -97,28 +97,28 @@ namespace WeirdScience
             return Candidates;
         }
 
-        public void OnError(IErrorEventArgs args)
+        public void OnError(ErrorEventArgs args)
         {
             var handler = OnErrorEvent;
             if (handler != null)
                 handler(this, args);
         }
 
-        public void OnMismatch(IMismatchEventArgs<T> args)
+        public void OnMismatch(MismatchEventArgs<T> args)
         {
             var handler = OnMismatchEvent;
             if (handler != null)
                 handler(this, args);
         }
 
-        public void Setup(IExperimentEventArgs args)
+        public void Setup(ExperimentEventArgs args)
         {
             var handler = SetupEvent;
             if (handler != null)
                 handler(this, args);
         }
 
-        public void Teardown(IExperimentEventArgs args)
+        public void Teardown(ExperimentEventArgs args)
         {
             var handler = TeardownEvent;
             if (handler != null)

@@ -47,12 +47,17 @@ namespace WeirdScience
 
         #endregion Public Methods
     }
+    public interface ILaboratory
+    {
+        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string experimentName);
+        IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(IScienceExperiment<T, TPublish> custom);
 
+    }
     public interface IErrorEventArgs : IExperimentEventArgs
     {
         #region Public Properties
 
-        IExperimentError Error { get; }
+        IExperimentError ExperimentError { get; }
 
         #endregion Public Properties
     }
@@ -126,14 +131,14 @@ namespace WeirdScience
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnError(EventHandler<IErrorEventArgs> handler);
+        IExperimentOptionsBuilder<T, TPublish> OnError(EventHandler<ErrorEventArgs> handler);
 
         /// <summary>
         /// Sets an action to perform when a mismatch occurs. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<IMismatchEventArgs<T>> handler);
+        IExperimentOptionsBuilder<T, TPublish> OnMismatch(EventHandler<MismatchEventArgs<T>> handler);
 
         /// <summary>
         /// Sets a method to determine whether or not to run the Candidates. Use this to conditionally run 
@@ -193,14 +198,14 @@ namespace WeirdScience
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Setup(EventHandler<IExperimentEventArgs> handler);
+        IExperimentOptionsBuilder<T, TPublish> Setup(EventHandler<ExperimentEventArgs> handler);
 
         /// <summary>
         /// Sets an action to perform after each Candidate is run. Multiple handlers can be added.
         /// </summary>
         /// <param name="handler"></param>
         /// <returns></returns>
-        IExperimentOptionsBuilder<T, TPublish> Teardown(EventHandler<IExperimentEventArgs> handler);
+        IExperimentOptionsBuilder<T, TPublish> Teardown(EventHandler<ExperimentEventArgs> handler);
 
         #endregion Public Methods
     }
@@ -239,19 +244,19 @@ namespace WeirdScience
     {
         #region Public Properties
 
-        event EventHandler<IErrorEventArgs> OnErrorEvent;
-        void OnError(IErrorEventArgs args);
+        event EventHandler<ErrorEventArgs> OnErrorEvent;
+        void OnError(ErrorEventArgs args);
 
-        event EventHandler<IMismatchEventArgs<T>> OnMismatchEvent;
+        event EventHandler<MismatchEventArgs<T>> OnMismatchEvent;
 
-        event EventHandler<IExperimentEventArgs> SetupEvent;
+        event EventHandler<ExperimentEventArgs> SetupEvent;
 
-        event EventHandler<IExperimentEventArgs> TeardownEvent;
-        void OnMismatch(IMismatchEventArgs<T> args);
+        event EventHandler<ExperimentEventArgs> TeardownEvent;
+        void OnMismatch(MismatchEventArgs<T> args);
 
-        void Setup(IExperimentEventArgs args);
+        void Setup(ExperimentEventArgs args);
 
-        void Teardown(IExperimentEventArgs args);
+        void Teardown(ExperimentEventArgs args);
         Func<T, T, bool> AreEqual { get; set; }
         Func<T> Control { get; set; }
 
@@ -347,9 +352,9 @@ namespace WeirdScience
 
         bool Ignore(T control, T candidate);
 
-        void OnError(IErrorEventArgs args);
+        void OnError(ErrorEventArgs args);
 
-        void OnMismatch(IMismatchEventArgs<T> args);
+        void OnMismatch(MismatchEventArgs<T> args);
 
         bool PreCondition();
 
@@ -367,9 +372,9 @@ namespace WeirdScience
 
         long SetTimeout();
 
-        void Setup(IExperimentEventArgs args);
+        void Setup(ExperimentEventArgs args);
 
-        void Teardown(IExperimentEventArgs args);
+        void Teardown(ExperimentEventArgs args);
 
         #endregion Public Methods
     }

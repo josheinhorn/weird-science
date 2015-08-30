@@ -51,7 +51,7 @@ namespace WeirdScience
         { }
 
         public Experiment(string name, ISciencePublisher publisher)
-            : this(name, publisher, new ExperimentState<TPublish>(), false)
+            : this(name, publisher, false)
         { }
 
         #endregion Public Constructors
@@ -91,12 +91,12 @@ namespace WeirdScience
             return Steps.Ignore == null ? false : Steps.Ignore(control, candidate);
         }
 
-        public virtual void OnError(IErrorEventArgs args)
+        public virtual void OnError(ErrorEventArgs args)
         {
             Steps.OnError(args);
         }
 
-        public virtual void OnMismatch(IMismatchEventArgs<T> args)
+        public virtual void OnMismatch(MismatchEventArgs<T> args)
         {
             Steps.OnMismatch(args);
         }
@@ -141,8 +141,7 @@ namespace WeirdScience
             if (CurrentState == null)
             {
                 throw new InvalidOperationException(
-                    "The Experiment State is null! This Experiment has likely already been complete. " +
-                    "Can't run Experiment.");
+                    "The Experiment State is null! Can't run Experiment.");
             }
             IExperimentResult<TPublish> results = new ExperimentResult<TPublish>
             {
@@ -183,12 +182,12 @@ namespace WeirdScience
             return Steps.RunInParallel == null ? false : Steps.RunInParallel();
         }
 
-        public virtual void Setup(IExperimentEventArgs args)
+        public virtual void Setup(ExperimentEventArgs args)
         {
             Steps.Setup(args);
         }
 
-        public virtual void Teardown(IExperimentEventArgs args)
+        public virtual void Teardown(ExperimentEventArgs args)
         {
             Steps.Teardown(args);
         }
@@ -229,7 +228,7 @@ namespace WeirdScience
                                 (controlException != null || !TryAreEqual(controlResult, candResult)))
                             {
                                 mismatched = true;
-                                TryOnMismatchAndPublish(controlResult, candResult, controlException, null);
+                                TryOnMismatch(controlResult, candResult, controlException, null);
                             }
                             candValue = TryPrepare(candResult);
                             TryTeardown();
@@ -261,7 +260,7 @@ namespace WeirdScience
                         {
                             //It's a mismatch if the exceptions don't match
                             mismatched = true;
-                            TryOnMismatchAndPublish(controlResult, candResult,
+                            TryOnMismatch(controlResult, candResult,
                                 controlException, sfe.ExperimentError.LastException); //potential throw
                         }
                         var errResult = new Observation<TPublish>
@@ -430,12 +429,12 @@ namespace WeirdScience
             CurrentState.CurrentStep = Operations.OnError;
             TryOp(() =>
             {
-                OnError(new ErrorEventArgs { Publisher = Publisher, State = CurrentState.Snapshot(), Error = error });
+                OnError(new ErrorEventArgs { Publisher = Publisher, State = CurrentState.Snapshot(), ExperimentError = error });
                 return 0;
             });
         }
 
-        private void TryOnMismatchAndPublish(T control, T candidate,
+        private void TryOnMismatch(T control, T candidate,
             Exception controlException, Exception candidateException)
         {
             CurrentState.CurrentStep = Operations.OnMismatch;

@@ -2,32 +2,35 @@
 
 namespace WeirdScience
 {
-    public static class Laboratory
+    public class Laboratory : ILaboratory
     {
-        #region Private Fields
+        #region Private Static Fields
 
         private static ISciencePublisher _publisher = new ConsolePublisher();
 
-        #endregion Private Fields
+        #endregion Private Static Fields
 
-        #region Public Methods
+        #region Public Static Methods
 
         public static IControlBuilder<T, T> DoScience<T>(string name, bool throwOnInternalExceptions = false)
         {
-            return new Laboratory<T, T>(name, _publisher, throwOnInternalExceptions);
+            return new Laboratory(_publisher, throwOnInternalExceptions)
+                .CreateExperiment<T, T>(name);
         }
 
         public static IExperimentBuilder<T, T> DoScience<T>(string name, Func<T> control,
             bool throwOnInternalExceptions = false)
         {
-            return new Laboratory<T, T>(name, _publisher, throwOnInternalExceptions)
+            return new Laboratory(_publisher, throwOnInternalExceptions)
+                .CreateExperiment<T, T>(name)
                 .Control(control);
         }
 
         public static IExperimentBuilder<T, TPublish> DoScience<T, TPublish>(string name, Func<T> control,
             Func<T, TPublish> prepareResults, bool throwOnInternalExceptions = false)
         {
-            var builder = new Laboratory<T, TPublish>(name, _publisher, throwOnInternalExceptions)
+            var builder = new Laboratory(_publisher, throwOnInternalExceptions)
+                .CreateExperiment<T, TPublish>(name)
                 .Control(control);
             builder.Prepare(prepareResults);
             return builder;
@@ -38,55 +41,62 @@ namespace WeirdScience
             _publisher = publisher;
         }
 
-        #endregion Public Methods
-    }
+        #endregion Public Static Methods
 
-    public class Laboratory<T, TPublish> : IControlBuilder<T, TPublish>
-    {
         #region Private Fields
+        private ISciencePublisher publisher;
+        private bool throwOnInternalExceptions;
 
-        private IScienceExperiment<T, TPublish> experiment;
-        private IExperimentSteps<T, TPublish> steps;
         #endregion Private Fields
 
         #region Public Constructors
-        public Laboratory(IScienceExperiment<T, TPublish> experiment, IExperimentSteps<T, TPublish> steps)
+
+        //public Laboratory(IScienceExperiment<T, TPublish> experiment, IExperimentSteps<T, TPublish> steps)
+        //{
+        //    if (experiment == null) throw new ArgumentNullException("experiment");
+        //    if (steps == null) throw new ArgumentNullException("steps");
+        //    this.experiment = experiment;
+        //    this.steps = steps;
+        //}
+        //public Laboratory(IScienceExperiment<T, TPublish> experiment)
+        //    : this(experiment, new ExperimentSteps<T,TPublish>())
+        //{ }
+
+        //public Laboratory(string name) : this(name, new ConsolePublisher())
+        //{ }
+
+        public Laboratory(ISciencePublisher publisher)
+            : this(publisher, false)
+        { }
+
+        //ctor for testing
+        public Laboratory(ISciencePublisher publisher, bool throwOnInternalExceptions)
         {
-            if (experiment == null) throw new ArgumentNullException("experiment");
-            if (steps == null) throw new ArgumentNullException("steps");
-            this.experiment = experiment;
-            this.steps = steps;
+            if (publisher == null) throw new ArgumentNullException("publisher");
+            this.publisher = publisher;
+            this.throwOnInternalExceptions = throwOnInternalExceptions;
         }
-        public Laboratory(IScienceExperiment<T, TPublish> experiment) 
-            : this(experiment, new ExperimentSteps<T,TPublish>())
-        { }
-
-        public Laboratory(string name) : this(name, new ConsolePublisher())
-        { }
-
-        public Laboratory(string name, ISciencePublisher publisher)
-            : this(new Experiment<T, TPublish>(name, publisher, false))
-        { }
-
-        public Laboratory(string name, ISciencePublisher publisher, bool throwOnInternalExceptions)
-            : this(new Experiment<T, TPublish>(name, publisher, throwOnInternalExceptions))
-        { }
 
         #endregion Public Constructors
 
         #region Public Methods
 
-        public IExperimentBuilder<T, TPublish> Candidate(string name, Func<T> candidate)
+        public IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string experimentName)
         {
-            steps.AddCandidate(name, candidate);
-            return new CandidateBuilder<T, TPublish>(experiment, steps);
+            return CreateExperiment(new Experiment<T, TPublish>(experimentName, publisher, throwOnInternalExceptions));
         }
 
-        public IExperimentBuilder<T, TPublish> Control(Func<T> control)
+        public IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(IScienceExperiment<T, TPublish> custom)
         {
-            steps.Control = control;
-            return new CandidateBuilder<T, TPublish>(experiment, steps);
+            return new ControlBuilder<T, TPublish>(custom);
         }
+
+        //internal IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string name, IExperimentSteps<T, TPublish> steps,
+        //            IExperimentState state)
+        //{
+        //    return CreateExperiment(new Experiment<T, TPublish>(name, publisher, state, steps,
+        //        throwOnInternalExceptions));
+        //}
 
         #endregion Public Methods
     }

@@ -8,7 +8,7 @@ namespace WeirdScience
 {
     public class ErrorEventArgs : ExperimentEventArgs, IErrorEventArgs
     {
-        public IExperimentError Error
+        public IExperimentError ExperimentError
         {
             get; internal set;
         }

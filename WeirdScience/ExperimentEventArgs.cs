@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WeirdScience
 {
-    public class ExperimentEventArgs : IExperimentEventArgs
+    public class ExperimentEventArgs : EventArgs, IExperimentEventArgs
     {
         public ISciencePublisher Publisher
         {
