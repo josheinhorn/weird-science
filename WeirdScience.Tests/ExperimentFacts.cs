@@ -184,8 +184,8 @@ namespace WeirdScience.Tests
                 Assert.Equal(result, excp);
             }
 
-            [Theory, AutoMoqData]
-            public void Control_Not_Set(Mock<ISciencePublisher> publisher,
+            [Theory(Skip = "Now we allow Control to not be set (candidate only experiments)"), AutoMoqData]
+            public void Control_Not_Set_Throws_Exception(Mock<ISciencePublisher> publisher,
                 Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
                 string name, string ctrlResult, string candResult, string candName)
             {
@@ -207,7 +207,30 @@ namespace WeirdScience.Tests
                 publisher.Verify(x => x.Publish(It.IsAny<string>(), It.IsAny<IExperimentState>()),
                     Times.Never);
             }
+            [Theory, AutoMoqData]
+            public void Control_Not_Set(Mock<ISciencePublisher> publisher,
+                Mock<IExperimentSteps<string, string>> steps, Mock<IExperimentState> state,
+                string name, string ctrlResult, string candResult, string candName)
+            {
+                //Setup
+                steps.DefaultValue = DefaultValue.Empty;
+                steps.SetupAllProperties();
+                Func<string> control = null;
+                SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
+                steps.SetupGet(x => x.Control).Returns(control);
+                state.SetupAllProperties();
+                //Exercise
+                var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
+                var result = sut.Run();
+                //Verify
+                steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Nothing runs
+                steps.Verify(x => x.Control, Times.AtLeastOnce);
+                // Still publishes
+                publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(r => r.Control == null)), 
+                    Times.AtLeastOnce);
+                Assert.Equal(default(string), result);
 
+            }
             [Theory, AutoMoqData]
             public void Ignore(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
                 Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
@@ -285,7 +308,7 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Candidates still run in this case
                 //Final results ARE published, but the Control Observation is not properly filled out
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
-                    r => !r.Control.ExceptionThrown && r.Control.ExperimentError == null)), Times.AtLeastOnce);
+                    r => r.Control == null)), Times.AtLeastOnce);
                 //Error Message NOT published
                 publisher.Verify(x => x.Publish(It.IsAny<string>(),
                    It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.Never);

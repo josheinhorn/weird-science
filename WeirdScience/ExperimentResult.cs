@@ -8,9 +8,9 @@ namespace WeirdScience
 
         public ExperimentResult()
         {
-            LastState = new ExperimentState<T>();
+            //LastState = new ExperimentState<T>();
             Candidates = new Dictionary<string, IObservation<T>>();
-            Control = new Observation<T>();
+            //Control = new Observation<T>();
         }
 
         #endregion Public Constructors

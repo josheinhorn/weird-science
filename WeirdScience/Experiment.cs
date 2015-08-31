@@ -288,8 +288,12 @@ namespace WeirdScience
             CurrentState.CurrentStep = Operations.Control;
             if (Steps.Control == null)
             {
-                throw new InvalidOperationException(
-                    "The Control was never set for this Experiment! Can't run an Experiment without a Control!");
+                // Can there be valid experiments with no Control?? Dunno but seems restrictive to enfore it
+                // if so, return default(T) instead of Exception
+                return default(T);
+                // Throw exception if we want to enforce having a Control
+                //throw new InvalidOperationException(
+                //    "The Control was never set for this Experiment! Can't run an Experiment without a Control!");
             }
             IExperimentError stepError = null;
             object context = null;

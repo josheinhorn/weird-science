@@ -178,7 +178,9 @@ The base implementation of `Experiment` handles Exceptions and tracking state, s
 As you can see from the earlier example, there are a number of optional steps that users can define when using the out-of-the-box functionality.
 
 ### Control
-This is possibly the most important step &mdash; it is the actual function that should run for this Experiment. Its result will be used to compare to each of the Candidates and will be returned as the final output.
+This is possibly the most important step &mdash; it is the actual function that should run for this Experiment. It will run 100% of the time and its result will be used to compare to each of the Candidates and will be returned as the final output.
+
+That said, the Control is technically optional, as you may want to run Experiments on completely new code that has no Control. This is a totally valid use case, however watch out for odd behavior as the Control result won't be set so Weird Science will report mismatches by default &mdash; we recommend using `.Ignore((a,b) => true)` to avoid this!
 
 This Step runs for the Control.
 
@@ -224,7 +226,7 @@ This Step does _not_ run for the Control.
 _Delegate Type:_ `IgnoreDelegate<T>`
 
 ### AreEqual
-This function determines if two results are equivalent &mdash; `true` if they are and `false` if they are not. The default for this is to use `EqualityComparer<T>.Default`. There is no guarantee that both values are not null.
+This function determines if two results are equivalent &mdash; `true` if they are and `false` if they are not. By default, Weird Science uses `EqualityComparer<T>.Default`. Remember that there is no guarantee that both values are not null.
 
 The arguments are passed to the delegate as follows: `(T control, T candidate)`
 

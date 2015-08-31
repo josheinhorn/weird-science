@@ -80,6 +80,8 @@
   <ItemGroup>
     <Compile Include="AutoMoqDataAttribute.cs" />
     <Compile Include="ExperimentFacts.cs" />
+    <Compile Include="ExperimentStepsFacts.cs" />
+    <Compile Include="LaboratoryFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

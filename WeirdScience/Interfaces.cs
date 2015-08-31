@@ -45,8 +45,9 @@ namespace WeirdScience
         #endregion Public Methods
     }
 
-    public interface IControlBuilder<T, TPublish> : ICandidateBuilder<T, TPublish>
+    public interface IControlBuilder<T, TPublish> : ICandidateBuilder<T, TPublish> 
     {
+        // TODO: Should we actually be able to build Experiments with no Control??
         #region Public Methods
 
         IExperimentBuilder<T, TPublish> Control(Func<T> control);
