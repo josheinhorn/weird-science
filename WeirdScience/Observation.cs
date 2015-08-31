@@ -1,4 +1,6 @@
-﻿namespace WeirdScience
+﻿using System;
+
+namespace WeirdScience
 {
     internal class Observation<T> : IObservation<T>
     {
@@ -11,6 +13,12 @@
         }
 
         public long ElapsedMilliseconds
+        {
+            get;
+            internal set;
+        }
+
+        public TimeSpan ElapsedTime
         {
             get;
             internal set;

@@ -344,7 +344,7 @@ namespace WeirdScience
         string Name { get; }
         bool TimedOut { get; }
         T Value { get; }
-
+        TimeSpan ElapsedTime { get; }
         #endregion Public Properties
 
         //other diagnostic info

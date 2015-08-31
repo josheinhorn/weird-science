@@ -12,7 +12,7 @@ namespace WeirdScience
     {
         #region Private Fields
 
-        private const string ControlName = "WeirdScience.Control";
+        private const string ControlName = "Control";
 
         private IExperimentState _currentState;
 
@@ -157,8 +157,8 @@ namespace WeirdScience
             }
             try
             {
-                RunCandidates(results, controlValue, controlException);
-                TryPublish(results);
+                if (RunCandidates(results, controlValue, controlException))
+                    TryPublish(results); //Don't publish if we didn't run any candidates
             }
             catch (Exception)
             {
@@ -201,8 +201,9 @@ namespace WeirdScience
 
         #region Private Methods
 
-        private void RunCandidates(IExperimentResult<TPublish> results, T controlResult, Exception controlException)
+        private bool RunCandidates(IExperimentResult<TPublish> results, T controlResult, Exception controlException)
         {
+            bool ran = false;
             var candidates = Steps.GetCandidates();
             if (candidates != null)
             {
@@ -218,6 +219,7 @@ namespace WeirdScience
                         CurrentState.Name = candidate.Key;
                         if (TryPreCondition() && candidate.Value != null)
                         {
+                            ran = true;
                             var context = TrySetContext();
                             CurrentState.Context = context;
                             TrySetup();
@@ -239,6 +241,7 @@ namespace WeirdScience
                                     {
                                         Value = candValue,
                                         ElapsedMilliseconds = timer.ElapsedMilliseconds,
+                                        ElapsedTime = timer.Elapsed,
                                         Context = context,
                                         IsMismatched = mismatched,
                                         ExceptionThrown = false,
@@ -279,6 +282,7 @@ namespace WeirdScience
                     }
                 }
             }
+            return ran;
         }
 
         private T RunControl(IExperimentResult<TPublish> results, out Exception controlException)

@@ -223,7 +223,7 @@ namespace WeirdScience.Tests
                 var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
                 var result = sut.Run();
                 //Verify
-                steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); //Nothing runs
+                steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce); // still runs
                 steps.Verify(x => x.Control, Times.AtLeastOnce);
                 // Still publishes
                 publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(r => r.Control == null)), 
@@ -554,11 +554,12 @@ namespace WeirdScience.Tests
                     a => a.State.CurrentStep == Operations.OnError && a.ExperimentError.LastException == excp
                     && a.ExperimentError.LastStep == Operations.PreCondition)), Times.AtLeastOnce);
                 //Results correct
-                publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
-                    r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
-                    && r.Candidates.All(kvp => kvp.Value.ExceptionThrown
-                    && kvp.Value.ExperimentError.LastException == excp
-                    && kvp.Value.ExperimentError.LastStep == Operations.PreCondition))), Times.Once);
+                //publisher.Verify(x => x.Publish(It.Is<IExperimentResult<string>>(
+                //    r => !r.Control.ExceptionThrown && r.Control.Value == ctrlResult
+                //    && r.Candidates.All(kvp => kvp.Value.ExceptionThrown
+                //    && kvp.Value.ExperimentError.LastException == excp
+                //    && kvp.Value.ExperimentError.LastStep == Operations.PreCondition))), Times.Once);
+                publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
                 //Message published
                 publisher.Verify(x => x.Publish(errMsg,
                    It.Is<IExperimentState>(y => y.CurrentStep == Operations.OnError)), Times.AtLeastOnce);
@@ -1038,7 +1039,7 @@ namespace WeirdScience.Tests
             }
 
             [Theory, AutoMoqData]
-            public void PreCondition(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
+            public void PreCondition_True(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
                 Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
                 string candName)
             {
@@ -1062,7 +1063,32 @@ namespace WeirdScience.Tests
                 steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce);
                 Assert.True(conditionRan);
             }
-
+            [Theory, AutoMoqData]
+            public void PreCondition_False(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
+                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
+                string candName)
+            {
+                //Setup
+                bool conditionRan = false;
+                Func<bool> preCondition = () =>
+                {
+                    conditionRan = true;
+                    return !conditionRan;
+                };
+                steps.DefaultValue = DefaultValue.Empty;
+                steps.SetupAllProperties();
+                steps.SetupGet(x => x.PreCondition).Returns(preCondition);
+                SetupControlAndCandidate(steps, ctrlResult, candResult, candName);
+                state.SetupAllProperties();
+                //Exercise
+                var sut = new Experiment<string, string>(name, publisher.Object, state.Object, steps.Object, true);
+                var result = sut.Run();
+                //Verify
+                steps.Verify(x => x.PreCondition, Times.AtLeastOnce);
+                steps.Verify(x => x.GetCandidates(), Times.AtLeastOnce);
+                publisher.Verify(x => x.Publish(It.IsAny<IExperimentResult<string>>()), Times.Never);
+                Assert.True(conditionRan);
+            }
             [Theory, AutoMoqData]
             public void Prepare(Mock<ISciencePublisher> publisher, Mock<IExperimentSteps<string, string>> steps,
                Mock<IExperimentState> state, string name, string ctrlResult, string candResult,
