@@ -230,6 +230,7 @@ namespace WeirdScience
 
         object Context { get; set; }
         Operations CurrentStep { get; set; }
+        string ExperimentName { get; set; }
         string Name { get; set; }
         DateTime Timestamp { get; }
 

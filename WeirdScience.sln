@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "Tester\Tester.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience.Tests", "WeirdScience.Tests\WeirdScience.Tests.csproj", "{B5D62EC8-DB4F-4A8D-96C6-BC21EECD1038}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience.StatsD", "WeirdScience.StatsDPublisher\WeirdScience.StatsD.csproj", "{4662F184-EED3-4FEF-BC99-FEDECE2CF44A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeirdScience.StatsD", "WeirdScience.StatsD\WeirdScience.StatsD.csproj", "{4662F184-EED3-4FEF-BC99-FEDECE2CF44A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

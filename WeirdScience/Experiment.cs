@@ -47,7 +47,7 @@ namespace WeirdScience
         { }
 
         public Experiment(string name, ISciencePublisher publisher, bool throwOnInternalExceptions)
-            : this(name, publisher, new ExperimentState<TPublish>(), throwOnInternalExceptions)
+            : this(name, publisher, new ExperimentState(), throwOnInternalExceptions)
         { }
 
         public Experiment(string name, ISciencePublisher publisher)
@@ -138,6 +138,7 @@ namespace WeirdScience
                 throw new InvalidOperationException(
                     "The Experiment State is null! Can't run Experiment.");
             }
+            CurrentState.ExperimentName = Name;
             IExperimentResult<TPublish> results = new ExperimentResult<TPublish>
             {
                 LastState = CurrentState,
@@ -433,7 +434,12 @@ namespace WeirdScience
             CurrentState.CurrentStep = Operations.OnError;
             TryOp(() =>
             {
-                OnError(new ErrorEventArgs { Publisher = Publisher, State = CurrentState.Snapshot(), ExperimentError = error });
+                OnError(new ErrorEventArgs
+                {
+                    Publisher = Publisher,
+                    State = CurrentState.Snapshot(),
+                    ExperimentError = error
+                });
                 return 0;
             });
         }
@@ -473,12 +479,6 @@ namespace WeirdScience
         {
             CurrentState.CurrentStep = Operations.Publish;
             TryOp(() => { Publish(results); return 0; });
-        }
-
-        private void TryPublish(string message, IExperimentState state)
-        {
-            CurrentState.CurrentStep = Operations.Publish;
-            TryOp(() => { Publish(message, state); return 0; });
         }
 
         private bool TryRunInParallel()

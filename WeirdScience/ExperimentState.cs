@@ -2,7 +2,7 @@
 
 namespace WeirdScience
 {
-    internal class ExperimentState<T> : IExperimentState
+    internal class ExperimentState : IExperimentState
     {
         #region Private Fields
 
@@ -24,6 +24,11 @@ namespace WeirdScience
         {
             get { return _step; }
             set { _step = value; Timestamp = DateTime.UtcNow; }
+        }
+
+        public string ExperimentName
+        {
+            get; set;
         }
 
         public string Name
