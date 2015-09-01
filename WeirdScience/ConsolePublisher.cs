@@ -7,7 +7,7 @@ namespace WeirdScience
     {
         #region Private Fields
 
-        private StringBuilder messages = new StringBuilder();
+        private readonly StringBuilder messages = new StringBuilder();
 
         #endregion Private Fields
 

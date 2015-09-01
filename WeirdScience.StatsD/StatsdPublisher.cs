@@ -10,6 +10,7 @@ namespace WeirdScience.StatsD
         private static readonly Regex splitterPattern = new Regex(@"[:\|]");
         private static readonly Regex statsdPattern = new Regex(@"^[^:\|]+:(\d+\|(g|c|ms)|[^:\|]+\|s)$");
         private static readonly Regex whitespace = new Regex(@"\s+");
+        private const string wsReplacement = "_";
         private readonly string hostName;
         private readonly int port;
         private readonly string prefix;
@@ -58,8 +59,9 @@ namespace WeirdScience.StatsD
                 using (var udp = new StatsdUDP(hostName, port))
                 {
                     var statsd = new Statsd(udp, prefix);
-                    TrySendMessage(message, string.Format("{0}.{1}.{2}", state.ExperimentName,
-                        whitespace.Replace(state.Name, "_"), state.CurrentStep),
+                    TrySendMessage(message, string.Format("{0}.{1}.{2}.",
+                        ReplaceWhitespace(state.ExperimentName),
+                        ReplaceWhitespace(state.Name), state.CurrentStep),
                         statsd);
                 }
             }
@@ -86,23 +88,27 @@ namespace WeirdScience.StatsD
 
         private static void AddObservationStats<T>(string experimentName, IObservation<T> observation, Statsd statsd)
         {
+            experimentName = ReplaceWhitespace(experimentName);
             statsd.Add<Statsd.Timing>(string.Format("{0}.{1}.Results.Microseconds", experimentName, observation.Name),
-                (int)(observation.ElapsedTime.TotalMilliseconds * 1000));
+                (int)(observation.ElapsedTime.TotalMilliseconds * 1000)); // use microseconds because required to sent int
             if (observation.IsMismatched)
             {
                 // Gauge, Meter, or Count -- use Count for now, gives us # of mismatches / second
-                statsd.Add<Statsd.Counting>(string.Format("{0}.{1}.Results.Mismatches", experimentName, observation.Name)
-                    , 1);
+                statsd.Add<Statsd.Counting>(string.Format("{0}.{1}.Results.Mismatches", experimentName, 
+                    observation.Name), 1);
             }
         }
-
+        private static string ReplaceWhitespace(string value)
+        {
+            return whitespace.Replace(value, wsReplacement);
+        }
         private static bool TrySendMessage(string message, string prefix, Statsd statsd)
         {
             bool result = false;
             if (statsdPattern.IsMatch(message)) //Shortcut if it's not a valid string
             {
                 var arr = splitterPattern.Split(message);
-                if (arr.Length == 3)
+                if (arr.Length == 3) // just in case the first pattern missed something...
                 {
                     var name = prefix + arr[0];
                     var value = arr[1];
@@ -118,12 +124,10 @@ namespace WeirdScience.StatsD
                                 result = true;
                             }
                             break;
-
                         case "s":
                             statsd.Send<Statsd.Set>(name, value);
                             result = true;
                             break;
-
                         case "ms":
                             if (int.TryParse(value, out iNum))
                             {
@@ -131,7 +135,6 @@ namespace WeirdScience.StatsD
                                 result = true;
                             }
                             break;
-
                         case "c":
                             if (int.TryParse(value, out iNum))
                             {

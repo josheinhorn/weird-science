@@ -45,8 +45,8 @@ namespace WeirdScience
 
         #region Private Fields
 
-        private ISciencePublisher publisher;
-        private bool throwOnInternalExceptions;
+        private readonly ISciencePublisher publisher;
+        private readonly bool throwOnInternalExceptions;
 
         #endregion Private Fields
 
@@ -91,13 +91,6 @@ namespace WeirdScience
         {
             return new ControlBuilder<T, TPublish>(custom);
         }
-
-        //internal IControlBuilder<T, TPublish> CreateExperiment<T, TPublish>(string name, IExperimentSteps<T, TPublish> steps,
-        //            IExperimentState state)
-        //{
-        //    return CreateExperiment(new Experiment<T, TPublish>(name, publisher, state, steps,
-        //        throwOnInternalExceptions));
-        //}
 
         #endregion Public Methods
     }

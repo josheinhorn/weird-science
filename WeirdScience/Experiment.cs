@@ -16,16 +16,16 @@ namespace WeirdScience
 
         private IExperimentState _currentState;
 
-        private string _name;
+        private readonly string _name;
 
-        private ISciencePublisher _publisher;
+        private readonly ISciencePublisher _publisher;
 
         private IExperimentSteps<T, TPublish> _steps;
 
-        private bool _throwOnInternalExceptions;
+        private readonly bool _throwOnInternalExceptions;
 
-        //possibly allow this to be injected?
-        private ExceptionEqualityComparer exceptionComparer = new ExceptionEqualityComparer();
+        // TODO: Inject in ctor
+        private readonly ExceptionEqualityComparer exceptionComparer = new ExceptionEqualityComparer();
 
         #endregion Private Fields
 

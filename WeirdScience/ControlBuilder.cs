@@ -6,8 +6,8 @@ namespace WeirdScience
     {
         #region Private Fields
 
-        private IScienceExperiment<T, TPublish> experiment;
-        private IExperimentSteps<T, TPublish> steps;
+        private readonly IScienceExperiment<T, TPublish> experiment;
+        private readonly IExperimentSteps<T, TPublish> steps;
 
         #endregion Private Fields
 
