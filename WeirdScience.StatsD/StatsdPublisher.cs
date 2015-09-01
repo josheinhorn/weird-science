@@ -7,11 +7,12 @@ namespace WeirdScience.StatsD
     {
         #region Private Fields
 
-        private static readonly Regex splitterPattern = new Regex(@"(:|\|)");
+        private static readonly Regex splitterPattern = new Regex(@"[:\|]");
         private static readonly Regex statsdPattern = new Regex(@"^[^:\|]+:(\d+\|(g|c|ms)|[^:\|]+\|s)$");
-        private string hostName;
-        private int port;
-        private string prefix;
+        private static readonly Regex whitespace = new Regex(@"\s+");
+        private readonly string hostName;
+        private readonly int port;
+        private readonly string prefix;
 
         #endregion Private Fields
 
@@ -37,13 +38,12 @@ namespace WeirdScience.StatsD
 
         //}
         /// <summary>
-        /// Sends properly formatted StatsD messages prefixed by "[Experiment Name]." and suffixed
-        /// by ".[Current Name].[Current Step]"
+        /// Sends properly formatted StatsD messages prefixed by "[Experiment Name].[Current Name].[Current Step]."
         /// </summary>
         /// <example>
         /// state = new ExperimentState { Name = "Candidate 1", ExperimentName = "Science!",
         /// CurrentStep = Operations.OnMismatch }; Publish("gaugor:333|g", state) --&gt; Sends
-        /// StatsD with: Name: "Science!.gaugor.Candidate_1.OnMismatch", Value: 333, Type: Gauge
+        /// StatsD with: Name: "Science!.Candidate_1.OnMismatch.gaugor", Value: 333, Type: Gauge
         /// </example>
         /// <remarks>
         /// see https://github.com/etsy/statsd/blob/master/docs/metric_types.md for formatting
@@ -58,8 +58,8 @@ namespace WeirdScience.StatsD
                 using (var udp = new StatsdUDP(hostName, port))
                 {
                     var statsd = new Statsd(udp, prefix);
-                    TrySendMessage(message, state.ExperimentName,
-                        string.Format("{0}.{1}", state.Name.Replace(" ", "_"), state.CurrentStep),
+                    TrySendMessage(message, string.Format("{0}.{1}.{2}", state.ExperimentName,
+                        whitespace.Replace(state.Name, "_"), state.CurrentStep),
                         statsd);
                 }
             }
@@ -96,17 +96,17 @@ namespace WeirdScience.StatsD
             }
         }
 
-        private static bool TrySendMessage(string message, string prefix, string suffix, Statsd statsd)
+        private static bool TrySendMessage(string message, string prefix, Statsd statsd)
         {
             bool result = false;
             if (statsdPattern.IsMatch(message)) //Shortcut if it's not a valid string
             {
                 var arr = splitterPattern.Split(message);
-                if (arr.Length == 5)
+                if (arr.Length == 3)
                 {
-                    var name = string.Format("{0}.{1}.{2}", prefix, arr[0], suffix);
-                    var value = arr[2];
-                    var type = arr[4];
+                    var name = prefix + arr[0];
+                    var value = arr[1];
+                    var type = arr[2];
                     int iNum;
                     double dNum;
                     switch (type)

@@ -86,6 +86,8 @@ This method can be called by the four event handlers of the Experiment execution
 
 `state` contains relevant info for the context of the call, including the Step that called it and the configured Context object.
 
+Weird Science comes with a built in `ConsolePublisher` that's little more than a reference implementation. There is also another project in this repo called `WeirdScience.StatsD` that has an implementation that publishes a couple of stats using this [C# StatsD Client](https://github.com/goncalopereira/statsd-csharp-client). More info about Etsy's StatsD found [here](https://github.com/etsy/statsd).
+
 ### Basic example
 A basic (albeit not very useful) implementation:
 
